@@ -12,7 +12,7 @@ Demo website
 
 Download link
 ===
-<a href="http://loginradius-social-plugins.s3.amazonaws.com/Prestashop/social-login.zip"> Download Social Login module</a>
+<a href="http://loginradius-social-plugins.s3.amazonaws.com/Prestashop/sociallogin.zip"> Download Social Login module</a>
 
 Plugin key features
 ===
