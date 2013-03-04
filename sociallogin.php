@@ -8,7 +8,7 @@ if ( !defined( '_PS_VERSION_' ) ){
 **/
 define("SL_NAME","sociallogin");
 
-define("SL_VERSION","1.2");
+define("SL_VERSION","1.3");
 
 define("SL_AUTHOR","LoginRadius");
 
@@ -120,7 +120,7 @@ $http = "http://";
 
 		$loc=(isset($_SERVER['REQUEST_URI']) ? urlencode($http.$_SERVER["HTTP_HOST"].$_SERVER['REQUEST_URI']): urlencode($http.$_SERVER["HTTP_HOST"].$_SERVER['PHP_SELF'].'?'.$_SERVER['QUERY_STRING']));
     $js_files='<script src="//hub.loginradius.com/include/js/LoginRadius.js" ></script> <script type="text/javascript"> 
-	function loginradius_interface() { $ui = LoginRadius_SocialLogin.lr_login_settings;$ui.interfacesize = "";$ui.apikey = "'.$API_KEY.'";$ui.callback="'.$loc.'"; $ui.lrinterfacecontainer ="interfacecontainerdiv"; LoginRadius_SocialLogin.init(options); }
+	function loginradius_interface() { $ui = LoginRadius_SocialLogin.lr_login_settings;$ui.interfacesize = "small";$ui.apikey = "'.$API_KEY.'";$ui.callback="'.$loc.'"; $ui.lrinterfacecontainer ="interfacecontainerdiv"; LoginRadius_SocialLogin.init(options); }
 	var options={}; options.login=true; LoginRadius_SocialLogin.util.ready(loginradius_interface); </script>';
 	
     $smarty->assign('js_files',$js_files);

@@ -15,7 +15,6 @@
     <ul>
 
       <li>
-
 	  <div>{$iframe}</div>
 
 	  </li>
@@ -29,7 +28,7 @@
 
 
 {else}
-
+{if !$added}
 <div id="mymodule_block_left"  {$margin_style}>
 
   <div class="block_content">
@@ -37,7 +36,7 @@
     <ul>
 
       <li>
-
+  
 	  <div>{$iframe}</div>
 
 	  </li>
@@ -47,7 +46,7 @@
   </div>
 
 </div>
-
+{/if}
 {/if}
 
 <!-- /Block mymodule -->
