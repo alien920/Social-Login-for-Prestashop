@@ -1,0 +1,209 @@
+/* CSS Document */
+#loginradius_first_block {
+display: block;
+border: 1px solid grey;
+background-color: #EAF7FF;}
+.spantxt{
+	float:left;
+	width:105px;
+	text-align:left;
+	}
+#popupouter{
+	-moz-border-radius:4px;
+	-webkit-border-radius:4px;
+	border-radius:4px;
+	margin-left:-185px;
+	left:50%;	
+	background:#f3f3f3;
+	padding:1px 0px 1px 0px;
+	width:450px;
+	position: absolute;
+	top:50%;
+	z-index:9999;
+	margin-top:-96px;
+}
+#popupinner{
+	-moz-border-radius:4px;
+	-webkit-border-radius:4px;
+	border-radius:4px;
+	background:#ffffff;
+	margin:10px;
+	padding:10px 8px 4px 8px;
+}
+#textmatter{
+	margin:10px 0px 10px 0px;
+	font-family:Arial, Helvetica, sans-serif;
+	color:#666666;
+	font-size:14px;
+}
+.inputtxt{
+	font-family:Arial, Helvetica, sans-serif;
+	font-size:11px;
+	border:#e5e5e5 1px solid;
+	width:280px;
+	height:27px;
+	margin:5px 0px 15px 0px;
+}
+.inputbutton{
+	border:#dcdcdc 1px solid;
+	-moz-border-radius:2px;
+	-webkit-border-radius:2px;
+	border-radius:2px;
+	text-decoration:none;
+	color:#6e6e6e;
+	font-family:Arial, Helvetica, sans-serif;
+	font-size:13px;
+	cursor:pointer;
+	background:#f3f3f3;
+	padding:6px 7px 6px 8px;
+	margin:0px 8px 0px 0px;
+}
+.inputbutton:hover{
+	border:#00ccff 1px solid;
+	-moz-border-radius:2px;
+	-webkit-border-radius:2px;
+	border-radius:2px;
+	khtml-border-radius:2px;
+	text-decoration:none;
+	color:#000000;
+	font-family:Arial, Helvetica, sans-serif;
+	font-size:13px;
+	cursor:pointer;
+	padding:6px 7px 6px 8px;
+	-moz-box-shadow: 0px 0px  4px #8a8a8a;
+	-webkit-box-shadow: 0px 0px  4px #8a8a8a;
+	box-shadow: 0px 0px  4px #8a8a8a;
+	background:#f3f3f3;
+	margin:0px 8px 0px 0px;
+}
+#textdivpopup{
+	text-align:right;
+	font-family:Arial, Helvetica, sans-serif;
+	font-size:11px;
+	color:#000000;
+}
+.spanpopup{
+	font-family:Arial, Helvetica, sans-serif;
+	font-size:11px;
+	color:#00ccff;
+}
+.span1{
+	font-family:Arial, Helvetica, sans-serif;
+	font-size:11px;
+	color:#333333;
+}
+.LoginRadius_container_outer {
+ width: 648px;
+ border: 1px solid #ccc;
+ background-color: #EAF7FF;
+}
+.LoginRadius_container_inner {
+ background-color: #EAF7FF;
+ padding: 10px;
+ margin-bottom: 10px;
+ overflow: hidden;
+ }
+.LoginRadius_container {
+ float:left;
+ padding: 10px;
+ margin-bottom: 10px;
+ overflow: hidden;
+ width:480px;
+ background-color: #EAF7FF;
+}
+.LoginRadius_container_outer h3 {
+ color:#00ccff;
+ font-size:1.1em;
+}
+.LoginRadius_container_outer ul {
+ list-style-type: disc;
+ padding-left: 20px;
+ }
+.LoginRadius_container_outer .LoginRadius_container_links {
+border-color: #E6DB55;
+}
+.LoginRadius_container_outer .LoginRadius_container_links a {
+ color: #111;
+ text-decoration:none;
+}
+.LoginRadius_container_outer .LoginRadius_container_links a:hover {
+ color: #00ccff;
+}
+.LoginRadius_table {
+ background-color: #efefef;
+ border: 1px solid #ccc;
+ width: 650px;
+ margin-bottom: 10px;
+}
+.LoginRadius_table input {
+ border-color: #aaa;
+}
+.LoginRadius_table .head {
+ font-weight: bold;
+ font-size: 13px;
+ font-weight: bold;
+ background-color: #ddd;
+}
+.LoginRadius_table tr td.row {
+ line-height: 36px;
+}
+.LoginRadius_table tr.description td {
+color: #0D5995;
+}
+.LoginRadius_table .row_white {
+ background-color: #fff;
+}
+<!--[if IE]>
+.LoginRadius_content_IE
+{
+background:black;
+-ms-filter:"progid:DXImageTransform.Microsoft.Alpha(Opacity=90)";
+filter: alpha(opacity=90);
+}
+.LoginRadius_overlay{
+	background: none no-repeat scroll 0 0 rgba(127, 127, 127, 0.6);
+	height: 100%;
+	left: 0;
+	overflow: auto;
+	padding: 0px 20px 130px;
+	position: fixed;
+	top: 0;
+	width: 100%;
+	z-index: 100001;
+}
+.lrshare_iconsprite32{
+  cursor: pointer !important;
+  height: 32px;
+  margin: 4px !important;
+  width: 32px;
+  padding: 0px !important;
+  border: none !important;
+  background: url("img/lrshare_iconsprite321.png") no-repeat scroll left top transparent;
+  list-style-type: none !important;
+}
+#sortable li{
+  float:left !important;
+ }
+.lrshare_iconsprite32.lrshare_delicious { background-position: 0px 0px; width: 32px; height: 32px; }
+.lrshare_iconsprite32.lrshare_digg { background-position: -34px 0px; width: 32px; height: 32px; }
+.lrshare_iconsprite32.lrshare_dotnetkicks { background-position: -68px 0px; width: 32px; height: 32px; }
+.lrshare_iconsprite32.lrshare_email { background-position: -102px 0px; width: 32px; height: 32px; }
+.lrshare_iconsprite32.lrshare_evenmore32 { background-position: -138px 0px; width: 32px; height: 32px; }
+.lrshare_iconsprite32.lrshare_facebook { background-position: -174px 0px; width: 32px; height: 32px; }
+.lrshare_iconsprite32.lrshare_google { background-position: -208px 0px; width: 32px; height: 32px; }
+.lrshare_iconsprite32.lrshare_googleplus { background-position: -242px 0px; width: 32px; height: 32px; }
+.lrshare_iconsprite32.lrshare_hyves { background-position: -276px 0px; width: 32px; height: 32px; }
+.lrshare_iconsprite32.lrshare_linkedin { background-position: -310px 0px; width: 32px; height: 32px; }
+.lrshare_iconsprite32.lrshare_live { background-position: -344px 0px; width: 32px; height: 32px; }
+.lrshare_iconsprite32.lrshare_myspace { background-position: -378px 0px; width: 32px; height: 32px; }
+.lrshare_iconsprite32.lrshare_pinterest { background-position: -412px 0px; width: 32px; height: 32px; }
+.lrshare_iconsprite32.lrshare_print { background-position: -446px 0px; width: 32px; height: 32px; }
+.lrshare_iconsprite32.lrshare_reddit { background-position: -480px 0px; width: 32px; height: 32px; }
+.lrshare_iconsprite32.lrshare_sharingcounter32 { background-position: -514px 0px; width: 50px; height: 32px; padding-top:4px !important; font-size:18px; }
+.lrshare_iconsprite32.lrshare_tumblr { background-position: -576px 0px; width: 32px; height: 32px; }
+.lrshare_iconsprite32.lrshare_twitter { background-position: -610px 0px; width: 32px; height: 32px; }
+.lrshare_iconsprite32.lrshare_viadeo { background-position: -644px 0px; width: 32px; height: 32px; }
+.lrshare_iconsprite32.lrshare_vkontakte { background-position: -678px 0px; width: 32px; height: 32px; }
+.lrshare_iconsprite32.lrshare_wordpress { background-position: -712px 0px; width: 32px; height: 32px; }
+.lrshare_iconsprite32.lrshare_yahoo { background-position: -746px 0px; width: 32px; height: 32px; }
+<![endif]-->
