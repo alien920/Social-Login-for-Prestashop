@@ -10,7 +10,7 @@ if (isset($_GET['apikey'])){
     echo '<div id="Error">Please enter a valid API Secret.</div>';
   }
   elseif($apikey == $apisecret) {
-  echo '<div id="Error">Both API key and Secret are same .Please enter the correct API key and Secret.</div>';
+  echo '<div id="Error">Please enter a valid API Key and  Secret</div>';
   }
   elseif (check_api_settings($apikey, $apisecret, $apicred)) {
     echo check_api_settings($apikey, $apisecret, $apicred);

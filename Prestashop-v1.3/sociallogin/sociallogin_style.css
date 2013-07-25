@@ -7,6 +7,7 @@ background-color: #EAF7FF;}
 	float:left;
 	width:105px;
 	text-align:left;
+	margin-top: 12px;
 	}
 #popupouter{
 	-moz-border-radius:4px;
@@ -16,7 +17,7 @@ background-color: #EAF7FF;}
 	left:50%;	
 	background:#f3f3f3;
 	padding:1px 0px 1px 0px;
-	width:450px;
+	width:500px;
 	position: absolute;
 	top:50%;
 	z-index:9999;

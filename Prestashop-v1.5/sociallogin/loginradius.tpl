@@ -1,7 +1,7 @@
 <!-- Block mymodule -->
 {if $right}
 <div id="mymodule_block_left" class="block" >
-  <h4>Social Login</h4>
+  <h4>{l s='Social Login' mod='sociallogin'}</h4>
   <div class="block_content">
     <ul>
       <li>
@@ -19,6 +19,7 @@
   </div>
 </div>
 {/if}
+
 
 <!-- /Block mymodule -->
 

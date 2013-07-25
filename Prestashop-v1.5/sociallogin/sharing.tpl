@@ -1,6 +1,5 @@
-{$sharing}
-<br/>
-{$counter}
+{$horizontal_sharing}
+{$vertical_sharing}
 <!-- /Block mymodule -->
 
 

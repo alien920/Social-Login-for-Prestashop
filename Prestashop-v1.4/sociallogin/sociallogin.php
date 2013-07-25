@@ -2,25 +2,16 @@
 if ( !defined( '_PS_VERSION_' ) ){
 exit;
 }
-/**
-*Created by loginradius.com ,email, date and other description will goes here....
-**/
-define("SL_NAME","sociallogin");
-define("SL_VERSION","2.0");
-define("SL_AUTHOR","LoginRadius");
-define("SL_DESCRIPTION","Let your users log in and comment via their accounts with popular ID providers such as Facebook, Google, Twitter, Yahoo, Vkontakte and over 21 more!.");
-define("SL_DISPLAY_NAME","Social Login");
-
 class sociallogin extends Module{
   public function __construct(){
-	$this->name = SL_NAME;
-	$this->version = SL_VERSION;
-	$this->author = SL_AUTHOR;
+	$this->name = "sociallogin";
+	$this->version = "2.5";
+	$this->author = "LoginRadius";
 	$this->need_instance = 1;
 	$this->module_key="3afa66f922e9df102449d92b308b4532";//don't change given by sir
 	parent::__construct();
-	$this->displayName = $this->l( SL_DISPLAY_NAME );
-	$this->description = $this->l( SL_DESCRIPTION );
+	$this->displayName = $this->l("Social Login");
+	$this->description = $this->l("Let your users log in and comment via their accounts with popular ID providers such as Facebook, Google, Twitter, Yahoo, Vkontakte and over 25 more!.");
 	}
 	
   /*
@@ -31,36 +22,41 @@ class sociallogin extends Module{
 	if ($cookie->isLogged()){
 	  return;
 	}
-	include_once(dirname(__FILE__)."/sociallogin_functions.php");
-	include_once(dirname(__FILE__)."/LoginRadius.php");
-	$API_KEY = trim(Configuration::get('API_KEY'));
-	$API_SECRET = trim(Configuration::get('API_SECRET'));
-	$cookie->lr_login=false;
-	$margin_style="";
-	if($str=="margin"){
-	  $margin_style='style="margin-left:8px;margin-top:5px;"';
-	}
-	$Title=Configuration::get('TITLE');
-	if(empty($API_KEY) || empty($API_SECRET) ){
-	  $iframe="<p style ='color:red;'>
-	LoginRadius Social Login Plugin is not configured!<p>
-	To activate your plugin, navigate to modules > Social Login in your Prestashop admin panel and hit the configure and insert LoginRadius API Key & Secret under LoginRadius API Settings section. Follow <a href ='http://support.loginradius.com/customer/portal/articles/677100-how-to-get-loginradius-api-key-and-secret' target = '_blank'>this</a> document to learn how to get API Key & Secret.";
+	$loginradius_api_key = trim(Configuration::get('API_KEY'));
+	$loginradius_api_secret = trim(Configuration::get('API_SECRET'));
+	if(Configuration::get('enable_social_login')=='0') {
+	if (!preg_match('/^\{?[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}\}?$/i', $loginradius_api_secret) || !preg_match('/^\{?[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}\}?$/i', $loginradius_api_key)) {
+			$iframe =  "<p style='color:red'>".$this->l('Your LoginRadius API Key or secret is not valid, please correct it or contact 
+		LoginRadius support at')."<br/><a href='http://www.LoginRadius.com' target='_blank'>www.loginradius.com</a></p>";
+	  if($str=="right" ||$str==""){ $right=true;} 
+	  else { $right=false; }
+	  $smarty->assign('right',$right);	
 	  $smarty->assign( 'iframe', $iframe );
+	  $smarty->assign( 'margin_style', '' );   
 	  return $this->display( __FILE__, 'loginradius.tpl' );
-	} else{
-	  $jsfiles='<script>$(function(){loginradius_interface();});</script>';
-	  $iframe=$Title.'<br/>'.$jsfiles.'<div id="interfacecontainerdiv" class="interfacecontainerdiv"> </div>';	
 	}
-	if($str=="right" ||$str==""){
-	  $right=true;
-	} else {
-	  $right=false;
+	elseif(!empty($loginradius_api_key) && !empty($loginradius_api_secret) ){
+		$cookie->lr_login=false;
+		$margin_style="";
+		if($str=="margin"){
+		  $margin_style='style="margin-left:8px;margin-top:5px;"';
+		}
+		$Title=Configuration::get('TITLE');
+		$iframe=$Title.'<br/><div id="interfacecontainerdiv" class="interfacecontainerdiv"></div>';	
+		if($str=="right" ||$str==""){
+		  $right=true;
+		} else {
+		  $right=false;
+		  $jsfiles='<script>$(function(){loginradius_interface();});</script>';
+		  $iframe=$Title.'<br/>'.$jsfiles.'<div id="interfacecontainerdiv" class="interfacecontainerdiv"></div>';	
+		}
+		$smarty->assign('right',$right);		
+		$smarty->assign( 'margin_style', $margin_style );     
+		$smarty->assign( 'iframe', $iframe );
+		return $this->display( __FILE__, 'loginradius.tpl' );
+		}
 	}
-	$smarty->assign('right',$right);		
-	$smarty->assign( 'margin_style', $margin_style );     
-	$smarty->assign( 'iframe', $iframe );
-	return $this->display( __FILE__, 'loginradius.tpl' );
-  }
+ }
   
    /*
   *  Right column hook that show social login interface right side.
@@ -79,161 +75,20 @@ class sociallogin extends Module{
   *  Header hook that add script [Social share script, Social counter script, Social Interface script] at head .
   */
   public function  hookHeader( $params) {
-	global $cookie;
 	include_once(dirname(__FILE__)."/sociallogin_functions.php");
-	$API_KEY = trim(Configuration::get('API_KEY'));
-	$API_SECRET = trim(Configuration::get('API_SECRET'));
-	if(isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']!='Off' && !empty($_SERVER['HTTPS'])) {
-	  $http='https://';
+	$script = '';
+	if(Configuration::get('enable_social_login')=='0') {
+		$script .= loginradius_interface_script();
 	}
-	else {
-	  $http='http://';
+	if( Configuration::get('enable_social_sharing')=='0') {
+		if( Configuration::get('enable_social_horizontal_sharing')=='0') {
+			$script .= loginradius_horizontal_share_script();
+		}
+		if( Configuration::get('enable_social_vertical_sharing')=='0') {
+			$script .= loginradius_vertical_share_script();
+		}
 	}
-	$loc=(isset($_SERVER['REQUEST_URI']) ? urlencode($http.$_SERVER["HTTP_HOST"].$_SERVER['REQUEST_URI']): urlencode($http.$_SERVER["HTTP_HOST"].$_SERVER['PHP_SELF'].'?'.$_SERVER['QUERY_STRING']));
-	$share = Configuration::get('chooseshare')? Configuration::get('chooseshare'):"0";
-	$verticalsharetopoffset = is_numeric(Configuration::get('verticalsharetopoffset'))? Configuration::get('verticalsharetopoffset').'px':"0px";
-	$verticalcountertopoffset = is_numeric(Configuration::get('verticalcountertopoffset'))? Configuration::get('verticalcountertopoffset').'px':"0px";
-	$social_share_pretext=Configuration::get('social_share_pretext');
-	$choosesharepos = Configuration::get('choosesharepos');
-	$choosecounterpos = Configuration::get('choosecounterpos');
-	if ($share == '0') {
-	  $sharesize = '32';
-	  $shareinterface = 'horizontal';
-	  $sharetitle='<div style="margin:0;"><b>'.$social_share_pretext.'</b></div>';
-	}
-	else if ($share == '1') {
-	  $sharesize = '16';
-	  $shareinterface = 'horizontal';
-	  $sharetitle='<div style="margin:0;"><b>'.$social_share_pretext.'</b></div>';
-	}
-	else if ($share == '2') {
-	  $sharesize = '32';
-	  $shareinterface = 'simpleimage';
-	  $sharetitle='<div style="margin:0;"><b>'.$social_share_pretext.'</b></div>';
-	}
-	else if ($share == '3') {
-	  $sharesize = '16';
-	  $shareinterface = 'simpleimage';
-	  $sharetitle='<div style="margin:0;"><b>'.$social_share_pretext.'</b></div>';
-	}
-	else if ($share == '4') {
-	  $sharesize = '32';
-	  $shareinterface = 'Simplefloat';
-	  $sharetitle='';
-	}
-	else if ($share == '5') {
-	  $sharesize = '16';
-	  $shareinterface = 'Simplefloat';
-	  $sharetitle='';
-	}
-	if ($choosesharepos == '0') {
-	  $vershretop = $verticalsharetopoffset;
-	  $vershreright = '';
-	  $vershrebottom = '';
-	  $vershreleft = '0px';
-	}
-	else if ($choosesharepos == '1') {
-	  $vershretop = $verticalsharetopoffset;
-	  $vershreright = '0px';
-	  $vershrebottom = '';
-	  $vershreleft = '';
-	}
-	else if ($choosesharepos == '2') {
-	  $vershretop = $verticalsharetopoffset;
-	  $vershreright = '';
-	  $vershrebottom = is_numeric(Configuration::get('verticalsharetopoffset'))? '':"0px";
-	  $vershreleft = '0px';
-	}
-	else if ($choosesharepos == '3') {
-	  $vershretop = $verticalsharetopoffset;
-	  $vershreright = '0px';
-	  $vershrebottom = is_numeric(Configuration::get('verticalsharetopoffset'))? '':"0px";
-	  $vershreleft = '';
-	}
-	else {
-	  $vershretop = $verticalsharetopoffset;
-	  $vershreright = '';
-	  $vershrebottom = '';
-	  $vershreleft = '';
-	}
-	$sharescript = '<script type="text/javascript">var islrsharing = true; var islrsocialcounter = true;</script> <script type="text/javascript" src="//share.loginradius.com/Content/js/LoginRadius.js" id="lrsharescript"></script> <script type="text/javascript"> LoginRadius.util.ready(function () { $i = $SS.Interface.'.$shareinterface.'; $SS.Providers.Top = [';
-	$rearrange_settings = unserialize(Configuration::get('rearrange_settings'));
-	$rearrnage_provider_list=$rearrange_settings;
-	if(empty($rearrnage_provider_list)) {
-	  $rearrange_settings[] = 'facebook';
-	  $rearrange_settings[] = 'googleplus';
-	  $rearrange_settings[] = 'twitter';
-	  $rearrange_settings[] = 'linkedin';
-	  $rearrange_settings[] = 'pinterest';
-	}
-	foreach ($rearrange_settings as $key=>$value) { 
-	  $sharescript .= '"' .$value .'",';
-	}
-	$sharescript .=']; $u = LoginRadius.user_settings; $u.apikey= "'.$API_KEY.'"; $i.size = '.$sharesize.';$i.left = "'.$vershreleft.'"; $i.top = "'.$vershretop.'";$i.right = "'.$vershreright.'";$i.bottom = "'.$vershrebottom.'"; $i.show("lrsharecontainer"); }); </script>';
-	$counter = Configuration::get('choosecounter')? Configuration::get('choosecounter'):"0";
-	if ($counter == '0') {
-	  $ishorizontal = 'true';
-	  $counter_type = 'horizontal';
-	}
-	else if ($counter == '1') {
-	  $ishorizontal = 'true';
-	  $counter_type = 'vertical';
-	}
-	else if ($counter == '2') {
-	  $ishorizontal = 'false';
-	  $counter_type = 'horizontal';
-	}
-	else if ($counter == '3') {
-	  $ishorizontal = 'false';
-	  $counter_type = 'vertical';
-	}
-	if ($choosecounterpos == '0') {
-	  $vercnttop = $verticalcountertopoffset;
-	  $vercntright = '';
-	  $vercntbottom = '';
-	  $vercntleft = '0px';
-	}
-	else if ($choosecounterpos == '1') {
-	  $vercnttop = $verticalcountertopoffset;
-	  $vercntright = '0px';
-	  $vercntbottom = '';
-	  $vercntleft = '';
-	}
-	else if ($choosecounterpos == '2') {
-	  $vercnttop = $verticalcountertopoffset;
-	  $vercntright = '';
-	  $vercntbottom = is_numeric(Configuration::get('verticalsharetopoffset'))? '' : '0px';
-	  $vercntleft = '0px';
-	}
-	else if ($choosecounterpos == '3') {
-	  $vercnttop = $verticalcountertopoffset;
-	  $vercntright = '0px';
-	  $vercntbottom = is_numeric(Configuration::get('verticalsharetopoffset'))? '' : '0px';
-	  $vercntleft = '';
-	}
-	else {
-	  $vercnttop = $verticalcountertopoffset;
-	  $vercntright = '';
-	  $vercntbottom = '';
-	  $vercntleft = '';
-	}
-	$counterscript= '<script type="text/javascript">var islrsharing = true; var islrsocialcounter = true;</script> <script type="text/javascript" src="//share.loginradius.com/Content/js/LoginRadius.js"></script> <script type="text/javascript"> LoginRadius.util.ready(function () { $SC.Providers.Selected = [';
-	$countericons = unserialize(Configuration::get('countericons'));
-	$counter_provider=$countericons;
-	if(empty($counter_provider)) {
-	  $countericons[] = 'Pinterest Pin it';
-	  $countericons[] = 'Facebook Like';
-	  $countericons[] = 'Google+ Share';
-	  $countericons[] = 'Twitter Tweet';
-	  $countericons[] = 'Hybridshare';
-	}
-	foreach ($countericons as $key=>$value) { 
-	  $counterscript .= '"' .$value .'",';
-	}
-	$counterscript .=']; $S = $SC.Interface.simple; $S.isHorizontal = '.$ishorizontal.'; $S.countertype = "'.$counter_type.'"; $S.left = "'.$vercntleft.'"; $S.top = "'.$vercnttop.'";$S.right = "'.$vercntright.'";$S.bottom = "'.$vercntbottom.'";$S.show("lrcounter_simplebox"); }); </script>';
-	return $script= '<script src="//hub.loginradius.com/include/js/LoginRadius.js" ></script> <script type="text/javascript"> 
-	function loginradius_interface() { $ui = LoginRadius_SocialLogin.lr_login_settings;$ui.interfacesize = "small";$ui.apikey = "'.$API_KEY.'";$ui.callback="'.$loc.'"; $ui.lrinterfacecontainer ="interfacecontainerdiv"; LoginRadius_SocialLogin.init(options); }
-	var options={}; options.login=true; LoginRadius_SocialLogin.util.ready(loginradius_interface); </script>'.$sharescript.''.$counterscript;
+    return $script;
   }
   
   /*
@@ -241,21 +96,20 @@ class sociallogin extends Module{
   */
   public function hookHome($params) {
 	global $smarty;
-	$sharingpretext=(Configuration::get('chooseshare')==4 || Configuration::get('chooseshare')==5) ? '' : Configuration::get('social_share_pretext');
-	$counterpretext=(Configuration::get('choosecounter')==2 || Configuration::get('choosecounter')==3) ? '' : Configuration::get('social_counter_pretext');
-	if( Configuration::get ('social_share_home')=='1') {
-	  if( Configuration::get('enable_social_sharing')=='1') {
-	    $sharing='<b>'.$sharingpretext.'</b><br/><div class="lrsharecontainer"></div>';
-	    $smarty->assign( 'sharing', $sharing ); 
+	if( Configuration::get('enable_social_sharing')=='0') {
+	if( Configuration::get ('social_share_home')=='1' || Configuration::get ('social_share_product')=='1' || Configuration::get ('social_share_cart')=='1') {
+	if( Configuration::get('enable_social_horizontal_sharing')=='0') {
+	    $sharingpretext = trim(Configuration::get('social_share_pretext'));
+	    $horizontal_sharing='<b>'.$sharingpretext.'</b><br/><div class="lrsharecontainer"></div><div class="lrcounter_simplebox"></div>';
+	    $smarty->assign( 'horizontal_sharing', $horizontal_sharing ); 
+		}
+		if( Configuration::get('enable_social_vertical_sharing')=='0') {
+	    $vertical_sharing= '<div class="lrshareverticalcontainer"></div><div class="lrcounter_verticalsimplebox"></div>';
+	    $smarty->assign( 'vertical_sharing', $vertical_sharing ); 
+		}
 	  }
-	}
-	if( Configuration::get ('social_counter_home')=='1') {
-	  if( Configuration::get('enable_social_counter')=='1') {
-	    $counter='<b>'.$counterpretext.'</b><br/><div class="lrcounter_simplebox"></div>';
-	    $smarty->assign( 'counter', $counter ); 
 	  }
-	}
-	if( Configuration::get('enable_social_sharing')=='1' || Configuration::get('enable_social_counter')=='1') {
+	if(Configuration::get('enable_social_sharing')=='0') {
 	  return $this->display( __FILE__, 'sharing.tpl' );
 	}
   }
@@ -264,49 +118,20 @@ class sociallogin extends Module{
   *  Invoice hook that showing share and counter widget at Invoice page. 
   */
   public function hookInvoice($params){
-	global $smarty;
-	$sharingpretext=(Configuration::get('chooseshare')==4 || Configuration::get('chooseshare')==5) ? '' : Configuration::get('social_share_pretext');
-	$counterpretext=(Configuration::get('choosecounter')==2 || Configuration::get('choosecounter')==3) ? '' : Configuration::get('social_counter_pretext');
-	if( Configuration::get('enable_social_sharing')=='1') {
-	  $sharing='<b>'.$sharingpretext.'</b><br/><div class="lrsharecontainer"></div>';
-	  $smarty->assign( 'sharing', $sharing ); 
-	}
-	if( Configuration::get('enable_social_counter')=='1') {
-	  $counter='<b>'.$counterpretext.'</b><div class="lrcounter_simplebox"></div>';
-	  $smarty->assign( 'counter', $counter ); 
-	}
-	if( Configuration::get('enable_social_sharing')=='1' || Configuration::get('enable_social_counter')=='1') {
-	  return $this->display( __FILE__, 'sharing.tpl' );
-	}
-  }
+  	return $this->hookHome($params);
+   }
   
   /*
   *  Cart hook that showing share and counter widget at Cart page. 
   */
-  public function hookShoppingCart($params){
-	global $smarty;
-	$sharingpretext=(Configuration::get('chooseshare')==4 || Configuration::get('chooseshare')==5) ? '' : Configuration::get('social_share_pretext');
-	$counterpretext=(Configuration::get('choosecounter')==2 || Configuration::get('choosecounter')==3) ? '' : Configuration::get('social_counter_pretext');
-	if( Configuration::get ('social_share_cart')=='1') {
-	  if( Configuration::get('enable_social_sharing')=='1') {
-	    $sharing='<b>'.$sharingpretext.'</b><br/><div class="lrsharecontainer"></div>';
-	    $smarty->assign( 'sharing', $sharing ); 
-	  }
-	}
-	if( Configuration::get ('social_counter_cart')=='1') {
-	  if( Configuration::get('enable_social_counter')=='1') {
-	    $counter='<b>'.$counterpretext.'</b><br/><div class="lrcounter_simplebox"></div>';
-	    $smarty->assign( 'counter', $counter ); 
-	  }
-	}
-	if( Configuration::get('enable_social_sharing')=='1' || Configuration::get('enable_social_counter')=='1') {
-	  return $this->display( __FILE__, 'sharing.tpl' );
-	}
+  public function hookShoppingCart($params){ 
+  	if(Configuration::get ('social_share_cart')=='1')
+  		return $this->hookHome($params); 
   }
 	 /*
   *  Product footer hook that showing share and counter widget at product footer page. 
   */
-  public function hookProductFooter() {
+  public function hookProductFooter($params) {
 	global $cookie, $link, $smarty;
 	/* Product informations */
 	$product = new Product((int)Tools::getValue('id_product'), false, (int)$cookie->id_lang);
@@ -315,98 +140,83 @@ class sociallogin extends Module{
 	$sharingpretext=(Configuration::get('chooseshare')==4 || Configuration::get('chooseshare')==5) ? '' : Configuration::get('social_share_pretext');
 	$counterpretext=(Configuration::get('choosecounter')==2 || Configuration::get('choosecounter')==3) ? '' : Configuration::get('social_counter_pretext');
 	$language = strtolower(Language::getIsoById($cookie->id_lang));
-	if( Configuration::get ('social_share_product')=='1') {
-	  if( Configuration::get('enable_social_sharing')=='1') {
- 	    $sharing='<b>'.$sharingpretext.'</b><br/><div class="lrsharecontainer"></div>';
-	    $smarty->assign( 'sharing', $sharing ); 
-	  }
-	}
-	if( Configuration::get ('social_counter_product')=='1') {
-	  if( Configuration::get('enable_social_counter')=='1') {
-	    $counter='<b>'.$counterpretext.'</b><br/><div class="lrcounter_simplebox"></div>';
-	    $smarty->assign( 'counter', $counter );
-	  }
-	}
-	if( Configuration::get('enable_social_sharing')=='1' || Configuration::get('enable_social_counter')=='1') {
-	  return $this->display( __FILE__, 'sharing.tpl' );
-	}
+	if(Configuration::get ('social_share_product')=='1')
+		return $this->hookHome($params); 
   }
   
    /*
   *  Top hook that Handle login functionality.
   */
-  public function hookTop(){
+    public function hookTop(){
 	global $cookie;
+	$module = new sociallogin();
+	include_once("sociallogin_functions.php");
 	if ($cookie->isLogged()){
-	  include_once("LoginRadius.php");
-	  $secret = trim(Configuration::get('API_SECRET'));
+	  include_once("LoginRadiusSDK.php");
+	  $loginradius_secret = trim(Configuration::get('API_SECRET'));
 	  $lr_obj=new LoginRadius();
-	  $userprofile=$lr_obj->loginradius_get_data($secret);
+	  $userprofile=$lr_obj->loginradius_get_data($loginradius_secret);
 	  if(isset($_REQUEST['token']) && !empty($userprofile)){
-	    include_once("sociallogin_user_data.php");
+	   $module = new sociallogin();
+	   // include_once("sociallogin_user_data.php");
 	    LrUser::linking($cookie,$userprofile);
 	  }
-	  if(isset($_REQUEST['id_provider'])) {		  
+	  if(isset($_REQUEST['id_provider'])) {
+	    $module = new sociallogin();
 	    $getdata = Db::getInstance()->ExecuteS('SELECT * FROM '.pSQL(_DB_PREFIX_.'customer').' as c WHERE c.email='." '$cookie->email' ".' LIMIT 0,1');
 	    $num=(!empty($getdata['0']['id_customer'])? $getdata['0']['id_customer']:"");
 	    $deletequery="delete from ".pSQL(_DB_PREFIX_.'sociallogin')." where provider_id ='".$_REQUEST['id_provider']."'";
 	    Db::getInstance()->Execute($deletequery);
-		$cookie->lrmessage = 'Your Social identity has been remove successfully';
+		$cookie->lrmessage = $module->l('Your Social identity has been removed successfully');
 	    Tools::redirect($_SERVER['HTTP_REFERER']);
 	  }
 	}
-	include_once(dirname(__FILE__)."/sociallogin_functions.php");
 	if(isset($_REQUEST['token'])){
-	  include_once("sociallogin_user_data.php");
+	 $module = new sociallogin();
+	 // include_once("sociallogin_user_data.php");
 	  $obj=new LrUser();
 	}elseif(isset($_REQUEST['SL_VERIFY_EMAIL'])){
+	  $module = new sociallogin();
 	  verifyEmail();
-	}elseif(isset($_REQUEST['hidden_val'])){
-	  global $cookie;
-	if(isset($_POST['LoginRadius']) && $_POST['LoginRadius']=="Submit" && ($_REQUEST['hidden_val']==$cookie->SL_hidden) ){
-	  $data=new stdClass;
+	}elseif (isset($_REQUEST['resend_email_verification'])) {
+	 $module = new sociallogin();
+     login_radius_resend_email_verification($_POST['social_id_value']);
+	 return;
+	}
+	elseif(isset($_REQUEST['hidden_val'])){
+	  global $cookie;  
+	if(isset($_POST['LoginRadius']) && $_POST['LoginRadius']=="Submit" && ($_REQUEST['hidden_val'] == $cookie->SL_hidden )){
+	  //$data=new stdClass;
 	if(isset($_POST['LoginRadius'])) {
-	  if(isset($_POST['SL_EMAIL'])){ $data->Email=$_POST['SL_EMAIL'];}
-	  if(isset($_POST['SL_CITY'])){ $data->CITY=$_POST['SL_CITY'];}
-	  if(isset($_POST['location-state'])){ $data->STATE=$_POST['location-state'];}
-	  if(isset($_POST['SL_PHONE'])){ $data->PhoneNumbers=$_POST['SL_PHONE'];}
-	  if(isset($_POST['SL_ADDRESS'])){ $data->ADDRESS=$_POST['SL_ADDRESS'];}
- 	  if(isset($_POST['SL_ZIP_CODE'])){ $data->ZIPCODE=$_POST['SL_ZIP_CODE'];}
-	  if(isset($_POST['SL_ADDRESS_ALIAS'])){ $data->ADDRESS_ALIAS=$_POST['SL_ADDRESS_ALIAS'];}
-	  if(isset($_POST['location_country'])){ $data->Country=$_POST['location_country'];}
+	global $cookie;
+	$data = unserialize($cookie->login_radius_data);
+	$profilefield=unserialize(Configuration::get('profilefield'));
+	if(empty($profilefield)) {
+	  $profilefield[] = '3';
+	}
+$profilefield = implode(';', $profilefield);
+	//$cookie->login_radius_data='';
+	  if(isset($_POST['SL_EMAIL'])){ $data['email']=$_POST['SL_EMAIL'];}
+	  if(isset($_POST['SL_CITY'])){ $data['city']=$_POST['SL_CITY'];}
+	  if(isset($_POST['location-state'])){ $data['state']=$_POST['location-state'];}
+	  if(isset($_POST['SL_PHONE'])){ $data['phonenumber']=$_POST['SL_PHONE'];}
+	  if(isset($_POST['SL_ADDRESS'])){ $data['address']=$_POST['SL_ADDRESS'];}
+ 	  if(isset($_POST['SL_ZIP_CODE'])){ $data['zipcode']=$_POST['SL_ZIP_CODE'];}
+	  if(isset($_POST['SL_ADDRESS_ALIAS'])){ $data['addressalias']=$_POST['SL_ADDRESS_ALIAS'];}
+	  if(isset($_POST['location_country'])){ $data['country']=$_POST['location_country'];}
+	  if(isset($_POST['SL_FNAME'])){ $data['fname']=$_POST['SL_FNAME'];$data['firstname']=$data['fname'];}
+	  if(isset($_POST['SL_LNAME'])){ $data['lname']=$_POST['SL_LNAME'];$data['lastname']=$data['lname'];}
 	}
 	$ERROR_MESSAGE=Configuration::get('ERROR_MESSAGE');
-	if(Configuration::get('user_require_field')=="1") {		
-	  if(empty($data->CITY) || empty($data->STATE) || empty($data->PhoneNumbers) || empty($data->ADDRESS) || empty($data->ZIPCODE)|| empty($data->Country) || empty($data->ADDRESS_ALIAS)) {
-	  popUpWindow('<p style="color:red; padding:0px;">'.$ERROR_MESSAGE.'</p>');
+	if(Configuration::get('user_require_field')=="1") {	
+	  if((empty($data['city']) && strpos($profilefield,'4') !== false) || empty($data['state'])  || (empty($data['phonenumber'])&& strpos($profilefield,'5') !== false) || (empty($data['address'])&& strpos($profilefield,'6') !== false) || (empty($data['zipcode'])&& strpos($profilefield,'8') !== false)|| (empty($data['country'])&& strpos($profilefield,'3') !== false) || empty($data['email'])|| (empty($data['addressalias'])&& strpos($profilefield,'7') !== false)|| (empty($data['fname'])&& strpos($profilefield,'1') !== false) || (empty($data['lname'])&& strpos($profilefield,'2') !== false)) {
+	  popUpWindow('<p style="color:red; padding:0px;">'.$ERROR_MESSAGE.'</p>',$data);
 	  return;
 	  }
-	}
-	if(isset($data->Email) && !empty($data->Email)){
-	  $email=$data->Email;
-	} else {
-	  $email= $cookie->Email;
-	}
-	if(empty($email) && Configuration::get('EMAIL_REQ')=="0" ) {
-	  popUpWindow('<p style="color:red; padding:0px;">'.$ERROR_MESSAGE.'</p>');
-	  return;
-	}
-	else if (!Validate::isEmail($email) && Configuration::get('EMAIL_REQ')=="0"){
-		$check=new stdClass;
-		$check->Email= '';
-		popUpWindow('<p style="color:red; padding:0px;">'.$ERROR_MESSAGE.'</p>',$check);
-		return;
-	}
-	if(Configuration::get('user_require_field')=="1") {	
-	$check=new stdClass;
-	  if(!empty($data->Country) && !empty($data->ZIPCODE)) {
-	    if(isset($data->Email) && !empty($data->Email)){
-	    $check->Email= '';
-	    }
-	    else 
-	      $check->Email= $email;
-	    $postcode=trim($data->ZIPCODE);
-	    $zip_code = Db::getInstance()->executeS('SELECT * FROM '._DB_PREFIX_.'country c WHERE c.iso_code = "'.$data->Country.'"');
+	    if(!empty($data['country']) && !empty($data['zipcode'])) {
+	      //$check['email']= $data['email'];
+	    $postcode=trim($data['zipcode']);
+	    $zip_code = Db::getInstance()->executeS('SELECT * FROM '._DB_PREFIX_.'country c WHERE c.iso_code = "'.$data['country'].'"');
    	    $zip_code_format=$zip_code['0']['zip_code_format'];
 	    if(!empty($zip_code_format)) {
 	      $zip_regexp = '/^'.$zip_code_format.'$/ui';
@@ -414,20 +224,24 @@ class sociallogin extends Module{
 	      $zip_regexp = str_replace('-', '(-|)', $zip_regexp);
 	      $zip_regexp = str_replace('N', '[0-9]', $zip_regexp);
 	      $zip_regexp = str_replace('L', '[a-zA-Z]', $zip_regexp);
-	      $zip_regexp = str_replace('C', $data->Country, $zip_regexp);
+	      $zip_regexp = str_replace('C', $data['country'], $zip_regexp);
 	      if (!preg_match($zip_regexp, $postcode)) {
+		    //$data = unserialize($cookie->login_radius_data);
 	        popUpWindow('<p style="color:red; padding:0px;margin-bottom: 3px;">'.$ERROR_MESSAGE.'</p><p 
-	style="color: red;font-size: 10px;">Your zip/postal code is incorrect.'.'<br />'.'Must be typed as follows:'.' '.str_replace('C', $data->Country, str_replace('N', '0', str_replace('L', 'A', $zip_code_format))).'</p>',$check);
+	style="color: red;margin-bottom: -20px; font-size: 10px;">'.$module->l('Your zip/postal code is incorrect.').'<br />'.$module->l('Must be typed as follows:').' '.str_replace('C', $data['country'], str_replace('N', '0', str_replace('L', 'A', $zip_code_format))).'</p>',$data);
 	        return;
 	      }
 	    }
 	  }
 	}
+	if (!Validate::isEmail( $data['email'])){
+	popUpWindow('<p style="color:red; padding:0px;">'.$ERROR_MESSAGE.'</p>',$data);
+	  return;
+	}
 	SL_data_save($data);
 	}else{
-	  $home = getHome();
-	  $msgg="Cookie has been deleted, please try again.";
-	  popup_verify($msgg,$home);
+	  $msgg=$module->l('Cookie has been deleted, please try again.');
+	  popup_verify($msgg);
 	  }
 	}
   }
@@ -449,6 +263,33 @@ class sociallogin extends Module{
 	return $this->display(__FILE__, 'my-account.tpl');
   }
   
+ 	public function all_messages($value){
+	return $this->l($value);
+	}
+	public function all_messagess(){
+	$msg ='';
+	$msg .= $this->l('Account cannot be mapped as it already exists in database');
+	$msg .= $this->l('Your account is successfully mapped');
+	$msg .= $this->l('Authentication failed.');
+	$msg .= $this->l('User has been disbled or blocked.');
+	$msg .= $this->l('Your Confirmation link Has Been Sent To Your Email Address. Please verify your email by clicking on confirmation link.');
+	$msg .= $this->l('Email is verified. Now you can login using Social Login.');
+	$msg .= $this->l('Verify your email id.');
+	$msg .= $this->l('Please click on the following link or paste it in browser to verify your email: click');
+	$msg .= $this->l('Please fill the following details to complete the registration');
+	$msg .= $this->l('Thank You For Registration');
+	$msg .= $this->l('New User Registration');
+	$msg .= $this->l('New User Registered to your site');
+	$msg .= $this->l('Resend Email Verification');
+	$msg .= $this->l('Country');
+	$msg .= $this->l('Email');
+	$msg .= $this->l('City');
+	$msg .= $this->l('ZIP code');
+	$msg .= $this->l('Address Title');	
+	$msg .= $this->l('Ok');	
+	$msg .= $this->l('Email will work at online only.');
+	$msg .= $this->l('This email id already exist');
+	}
    /*
   * Install hook that  register hook which used by social Login.
   */
@@ -490,106 +331,82 @@ SQLQUERY;
   public function getContent(){
 	$html = '';
 	if(Tools::isSubmit('submitKeys'))  {
-	  $API_SECRET=trim(Tools::getValue('API_SECRET'));
-	  $API_KEY=trim(Tools::getValue('API_KEY'));
-	  if($API_KEY==''){
-		  	$html .= $this->displayError($this->l('Please enter a valid API Key'));
-		  }
-	  elseif($API_SECRET==''){
-		  	$html .= $this->displayError($this->l('Please enter a valid API Secret Key'));
-		  }
-	  elseif($API_SECRET==$API_KEY){
-				$html .= $this->displayError($this->l('Please enter a valid API Key and API Secret Key'));
-		}
-	  elseif($API_SECRET!='' && $API_KEY!='' && preg_match('/^\{?[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}\}?$/i', $API_KEY) && preg_match('/^\{?[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}\}?$/i', $API_SECRET)){
-	  $val = trim(Tools::getValue('LoginRadius_redirect'));
-	  if($val=="url"){
-	  $val = trim(Tools::getValue('redirecturl'));//redirecturl
-	  }
-	  Configuration::updateValue('LoginRadius_redirect', Tools::getValue('LoginRadius_redirect'));
-	  Configuration::updateValue('redirecturl',Tools::getValue('redirecturl'));	
-	  Configuration::updateValue('SOCIAL_SHARE_CODE',Tools::getValue('SOCIAL_SHARE_CODE'));	
-	  Configuration::updateValue('API_KEY', trim(Tools::getValue('API_KEY')));
-	  Configuration::updateValue('API_SECRET', trim(Tools::getValue('API_SECRET')));
-	  Configuration::updateValue('TITLE', Tools::getValue('TITLE',"Please login with"));
-	  Configuration::updateValue('EMAIL_REQ',(int)( Tools::getValue('EMAIL_REQ')));
-	  Configuration::updateValue('SEND_REQ',(int)( Tools::getValue('SEND_REQ')));
-	  Configuration::updateValue('CURL_REQ',(int)( Tools::getValue('CURL_REQ')));	
-	  Configuration::updateValue('ACC_MAP',(int)( Tools::getValue('ACC_MAP')));
-	  Configuration::updateValue('SOCIAL_SHARE_CODE', Tools::getValue('SOCIAL_SHARE_CODE'));
-	  Configuration::updateValue('SOCIAL_COUNTER_CODE',  Tools::getValue('SOCIAL_COUNTER_CODE'));
-	  Configuration::updateValue('ERROR_MESSAGE',  Tools::getValue('ERROR_MESSAGE'));
-	  Configuration::updateValue('POPUP_TITLE', Tools::getValue('POPUP_TITLE'));
-	  Configuration::updateValue('enable_social_sharing',(int)( Tools::getValue('enable_social_sharing')));
-	  Configuration::updateValue('social_share_home',(int)( Tools::getValue('social_share_home')));
-	  Configuration::updateValue('social_share_cart',(int)( Tools::getValue('social_share_cart')));
-	  Configuration::updateValue('social_share_product',(int)( Tools::getValue('social_share_product')));
-	  Configuration::updateValue('social_counter_home',(int)( Tools::getValue('social_counter_home')));
-	  Configuration::updateValue('social_counter_cart',(int)( Tools::getValue('social_counter_cart')));
-	  Configuration::updateValue('social_counter_product',(int)( Tools::getValue('social_counter_product')));
-	  Configuration::updateValue('enable_social_counter',(int)( Tools::getValue('enable_social_counter')));
-	  Configuration::updateValue('user_notification',Tools::getValue('user_notification'));
-	  Configuration::updateValue('user_require_field',Tools::getValue('user_require_field'));
-	  Configuration::updateValue('social_share_pretext',  Tools::getValue('social_share_pretext'),"Share it now!");
-	  Configuration::updateValue('social_counter_pretext',  Tools::getValue('social_counter_pretext'));
-	  Configuration::updateValue('chooseshare',  Tools::getValue('chooseshare'));
-	  Configuration::updateValue('choosecounter',  Tools::getValue('choosecounter'));
-	  Configuration::updateValue('choosesharepos',  Tools::getValue('choosesharepos'));
-	  Configuration::updateValue('choosecounterpos',  Tools::getValue('choosecounterpos'));
-	  Configuration::updateValue('rearrange_settings',  sizeof(Tools::getValue('rearrange_settings'))>0 ? serialize(Tools::getValue('rearrange_settings')) : "");
-	  Configuration::updateValue('countericons',  sizeof(Tools::getValue('countericons'))>0 ? serialize(Tools::getValue('countericons')) : "");
-	  Configuration::updateValue('verticalsharetopoffset',  Tools::getValue('verticalsharetopoffset'));
-	  Configuration::updateValue('verticalcountertopoffset',  Tools::getValue('verticalcountertopoffset'));
-	  $html .= $this->displayConfirmation($this->l('Settings updated.'));		
-	  }else{
-	  $html .= $this->displayError($this->l('API Key & API Secret not valid'));
-	  }		
+		$loginradius_api_key =trim(Tools::getValue('API_KEY'));
+		$loginradius_api_secret = trim(Tools::getValue('API_SECRET'));
+		if(!empty($loginradius_api_key) && !preg_match('/^\{?[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}\}?$/i', $loginradius_api_key))
+		$html .= $this->displayError($this->l('Please enter a valid API Key'));
+		elseif(!empty($loginradius_api_secret) && !preg_match('/^\{?[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}\}?$/i', $loginradius_api_secret))
+		$html .= $this->displayError($this->l('Please enter a valid API Secret'));
+		elseif((!empty($loginradius_api_key) || !empty($loginradius_api_secret)) && ($loginradius_api_key == $loginradius_api_secret))
+		$html .= $this->displayError($this->l('Please enter a valid API Key and  Secret'));
+	 	 $val = trim(Tools::getValue('LoginRadius_redirect'));
+	  	if($val=="url"){
+	  		$val = trim(Tools::getValue('redirecturl'));//redirecturl
+	  	}
+		Configuration::updateValue('LoginRadius_redirect', Tools::getValue('LoginRadius_redirect'));
+		Configuration::updateValue('redirecturl',Tools::getValue('redirecturl'));	
+		Configuration::updateValue('API_KEY', trim(Tools::getValue('API_KEY')));
+		Configuration::updateValue('API_SECRET', trim(Tools::getValue('API_SECRET')));
+		Configuration::updateValue('TITLE', Tools::getValue('TITLE',"Please login with"));
+		Configuration::updateValue('EMAIL_REQ',(int)( Tools::getValue('EMAIL_REQ')));
+		Configuration::updateValue('SEND_REQ',(int)( Tools::getValue('SEND_REQ')));
+		Configuration::updateValue('CURL_REQ',(int)( Tools::getValue('CURL_REQ')));	
+		Configuration::updateValue('ACC_MAP',(int)( Tools::getValue('ACC_MAP')));
+		Configuration::updateValue('ERROR_MESSAGE',  Tools::getValue('ERROR_MESSAGE'));
+		Configuration::updateValue('POPUP_TITLE', Tools::getValue('POPUP_TITLE'));
+		Configuration::updateValue('enable_social_sharing',(int)( Tools::getValue('enable_social_sharing')));
+		Configuration::updateValue('enable_social_horizontal_sharing',(int)( Tools::getValue('enable_social_horizontal_sharing')));
+		Configuration::updateValue('enable_social_vertical_sharing',(int)( Tools::getValue('enable_social_vertical_sharing')));
+		Configuration::updateValue('enable_social_login',(int)( Tools::getValue('enable_social_login')));
+		Configuration::updateValue('social_login_icon_column', trim(Tools::getValue('social_login_icon_column')));
+		Configuration::updateValue('social_login_background_color', trim(Tools::getValue('social_login_background_color')));
+		Configuration::updateValue('social_share_home',(int)( Tools::getValue('social_share_home')));
+		Configuration::updateValue('social_share_cart',(int)( Tools::getValue('social_share_cart')));
+		Configuration::updateValue('social_share_product',(int)( Tools::getValue('social_share_product')));
+		Configuration::updateValue('social_verticalshare_home',(int)( Tools::getValue('social_verticalshare_home')));
+		Configuration::updateValue('social_verticalshare_cart',(int)( Tools::getValue('social_verticalshare_cart')));
+		Configuration::updateValue('social_verticalshare_product',(int)( Tools::getValue('social_verticalshare_product')));
+		Configuration::updateValue('user_notification',Tools::getValue('user_notification'));
+		Configuration::updateValue('user_require_field',Tools::getValue('user_require_field'));
+		Configuration::updateValue('update_user_profile',Tools::getValue('update_user_profile'));
+		Configuration::updateValue('social_share_pretext',  Tools::getValue('social_share_pretext'),"Share it now!");
+		Configuration::updateValue('chooseshare',  Tools::getValue('chooseshare'));
+		Configuration::updateValue('chooseverticalshare',  Tools::getValue('chooseverticalshare')); 
+		Configuration::updateValue('choosesharepos',  Tools::getValue('choosesharepos'));
+		Configuration::updateValue('profilefield',  sizeof(Tools::getValue('profilefield'))>0 ? serialize(Tools::getValue('profilefield')) : "");
+		Configuration::updateValue('rearrange_settings',  sizeof(Tools::getValue('rearrange_settings'))>0 ? serialize(Tools::getValue('rearrange_settings')) : "");
+		Configuration::updateValue('vertical_rearrange_settings',  sizeof(Tools::getValue('vertical_rearrange_settings'))>0 ? serialize(Tools::getValue('vertical_rearrange_settings')) : "");
+		Configuration::updateValue('socialshare_show_counter_list',  sizeof(Tools::getValue('socialshare_show_counter_list'))>0 ? serialize(Tools::getValue('socialshare_show_counter_list')) : "");
+		Configuration::updateValue('socialshare_counter_list',  sizeof(Tools::getValue('socialshare_counter_list'))>0 ? serialize(Tools::getValue('socialshare_counter_list')) : ""); 
+		Configuration::updateValue('verticalsharetopoffset',  Tools::getValue('verticalsharetopoffset'));
+		$html .= $this->displayConfirmation($this->l('Settings updated.'));		
 	}
 	$API_KEY = trim(Configuration::get('API_KEY'));		
 	$API_SECRET = trim(Configuration::get('API_SECRET'));
 	$Title = Configuration::get('TITLE');
+	$social_login_icon_column = trim(Configuration::get('social_login_icon_column'));		
+	$social_login_background_color = trim(Configuration::get('social_login_background_color'));
 	$ERROR_MESSAGE=Configuration::get('ERROR_MESSAGE');
 	$POPUP_TITLE=Configuration::get('POPUP_TITLE');
-	$social_share_pretext=Configuration::get('social_share_pretext');
 	$chooseshare= Configuration::get('chooseshare')? Configuration::get('chooseshare'):"0";
-	$social_counter_pretext= Configuration::get('social_counter_pretext');
-	$choosecounter= Configuration::get('choosecounter') ? Configuration::get('choosecounter') : "0";
+	$chooseverticalshare= Configuration::get('chooseverticalshare')? Configuration::get('chooseverticalshare'):"4";
 	$LoginRadius_redirect=Configuration::get('LoginRadius_redirect');
 	$redirecturl=Configuration::get('redirecturl');
+	$profilefield=unserialize(Configuration::get('profilefield'));
+	$user_profile_value=Configuration::get('user_require_field');
+	if(empty($profilefield)) {
+	  $profilefield[] = '3';
+	}
+	$profilefield = implode(';', $profilefield);
 	$rearrange_settings=Configuration::get('rearrange_settings');
-	$countericons=Configuration::get('countericons');
 	$choosesharepos=Configuration::get('choosesharepos');
 	$verticalsharetopoffset=Configuration::get('verticalsharetopoffset');
-	$choosecounterpos=Configuration::get('choosecounterpos');
-	$verticalcountertopoffset=Configuration::get('verticalcountertopoffset');
 	$selected="";			
 	$redirect="";		
 	$jsVal=1;
-	$hori32 = "";
-	$hori16 = "";
-	$horithemelarge = "";
-	$horithemesmall = "";
-	$vertibox32 = "";
-	$vertibox16 = "";
 	$checked[0]="";		
 	$checked[1]="";		
 	$checked[2]="";		
-	if ($chooseshare == '0' ) $hori32 = "checked='checked'";
-	else if ($chooseshare == '1' ) $hori16 = "checked='checked'";
-	else if ($chooseshare == '2' ) $horithemelarge = "checked='checked'";
-	else if ($chooseshare == '3' ) $horithemesmall = "checked='checked'";
-	else if ($chooseshare == '4' ) $vertibox32 = "checked='checked'";
-	else if ($chooseshare == '5' ) $vertibox16 = "checked='checked'";
-	else $hori32 = "checked='checked'";	
-	$chori32 = "";
-	$chori16 = "";
-	$cvertibox32 = "";
-	$cvertibox16 = "";
-	if ($choosecounter == '0' ) $chori16 = "checked='checked'";
-	else if ($choosecounter == '1' ) $chori32 = "checked='checked'";
-	else if ($choosecounter == '2' ) $cvertibox32 = "checked='checked'";
-	else if ($choosecounter == '3' ) $cvertibox16 = "checked='checked'";
-	else $chori16 = "checked='checked'";
 	if($LoginRadius_redirect=="profile"){
 	$checked[1]='checked="checked"';
 	}elseif ($LoginRadius_redirect=="url") {
@@ -600,103 +417,14 @@ SQLQUERY;
 	else {
 	$checked[0]='checked="checked"';
 	}
-	$autoshare=true;
-	$autocounter=true;
-	$enablefb = "";
-	$enabletwitter = "";
-	$enableprint = "";
-	$enableemail = "";
-	$enablegoogle = "";
-	$enabledigg = "";
-	$enablereddit = "";
-	$enablevk = "";
-	$enablegplus = "";
-	$enabletumbler = "";
-	$enablelinkedin = "";
-	$enablemyspace = "";
-	$enabledeli = "";
-	$enableyahoo = "";
-	$enablelive = "";
-	$enablehyves = "";
-	$enablednnkicks = "";
-	$enablepin = "";
-	$rearrange_settings = unserialize(Configuration::get('rearrange_settings'));
-	$rearrnage_provider_list=$rearrange_settings;
-	if(empty($rearrnage_provider_list)) {
-	  $rearrnage_provider_list[] = 'facebook';
-	  $rearrnage_provider_list[] = 'googleplus';
-	  $rearrnage_provider_list[] = 'twitter';
-	  $rearrnage_provider_list[] = 'linkedin';
-	  $rearrnage_provider_list[] = 'pinterest';
+	$countericons = unserialize(Configuration::get('socialshare_show_counter_list'));
+	if(empty($countericons)) {
+	  $countericons = array('Pinterest Pin it','Facebook Like','Google+ Share','Twitter Tweet','Hybridshare');
 	}
-	foreach($rearrnage_provider_list as $provider){
-	if($provider=='facebook'){ $enablefb="checked=checked";$autoshare=false; }
-	if($provider=='twitter'){ $enabletwitter="checked=checked";$autoshare=false; }
-	if($provider=='print'){ $enableprint="checked=checked";$autoshare=false; }
-	if($provider=='email'){ $enableemail="checked=checked";$autoshare=false; }
-	if($provider=='google'){ $enablegoogle="checked=checked";$autoshare=false; }
-	if($provider=='digg'){ $enabledigg="checked=checked";$autoshare=false; }
-	if($provider=='reddit'){ $enablereddit="checked=checked";$autoshare=false; }
-	if($provider=='vkontakte'){ $enablevk="checked=checked";$autoshare=false; }
-	if($provider=='googleplus'){ $enablegplus="checked=checked";$autoshare=false; }
-	if($provider=='tumblr'){ $enabletumbler="checked=checked";$autoshare=false; }
-	if($provider=='linkedin'){ $enablelinkedin="checked=checked";$autoshare=false; }
-	if($provider=='myspace'){ $enablemyspace="checked=checked";$autoshare=false; }
-	if($provider=='delicious'){ $enabledeli="checked=checked";$autoshare=false; }
-	if($provider=='yahoo'){ $enableyahoo="checked=checked";$autoshare=false; }
-	if($provider=='live'){ $enablelive="checked=checked";$autoshare=false; }
-	if($provider=='hyves'){ $enablehyves="checked=checked";$autoshare=false; }
-	if($provider=='dotnetkicks'){ $enablednnkicks="checked=checked";$autoshare=false; }
-	if($provider=='pinterest'){ $enablepin="checked=checked";$autoshare=false; }
+	$verticalcountericons = unserialize(Configuration::get('socialshare_counter_list'));
+	if(empty($verticalcountericons)) {
+	  $verticalcountericons = array('Pinterest Pin it','Facebook Like','Google+ Share','Twitter Tweet','Hybridshare');
 	}
-	/*if($autoshare==true) {
-	$enablefb="checked=checked";
-	$enabletwitter="checked=checked";
-	$enablepin="checked=checked";
-	$enablegplus="checked=checked";
-	$enablelinkedin="checked=checked";
-	}*/
-	$enablefblike = "";
-	$enablefbrecommend = "";
-	$enablefbsend = "";
-	$enablegplusone = "";
-	$enablegshare = "";
-	$enablelinkedinshare = "";
-	$enabletweet = "";
-	$enablestbadge = "";
-	$enableredditshare = "";
-	$enablepinterestshare = "";
-	$enablehybridshare = "";
-	$countericons = unserialize(Configuration::get('countericons'));
-	$counter_provider_list=$countericons;
-	if(empty($counter_provider_list)) {
-	  $counter_provider_list[] = 'Pinterest Pin it';
-	  $counter_provider_list[] = 'Facebook Like';
-	  $counter_provider_list[] = 'Google+ Share';
-	  $counter_provider_list[] = 'Twitter Tweet';
-	  $counter_provider_list[] = 'Hybridshare';
-	}
-	foreach($counter_provider_list as $provider_counter){
-	  if($provider_counter=='Facebook Like'){ $enablefblike="checked=checked";$autocounter=false; }
-	  if($provider_counter=='Facebook Recommend'){ $enablefbrecommend="checked=checked";$autocounter=false; }
-	  if($provider_counter=='Facebook Send'){ $enablefbsend="checked=checked";$autocounter=false; }
-	  if($provider_counter=='Google+ +1'){ $enablegplusone="checked=checked";$autocounter=false; }
-	  if($provider_counter=='Google+ Share'){ $enablegshare="checked=checked";$autocounter=false; }
-	  if($provider_counter=='LinkedIn Share'){ $enablelinkedinshare="checked=checked";$autocounter=false; }
-	  if($provider_counter=='Twitter Tweet'){ $enabletweet="checked=checked";$autocounter=false; }
-	  if($provider_counter=='StumbleUpon Badge'){ $enablestbadge="checked=checked";$autocounter=false; }
-	  if($provider_counter=='Reddit'){ $enableredditshare="checked=checked";$autocounter=false; }
-	  if($provider_counter=='Pinterest Pin it'){ $enablepinterestshare="checked=checked";$autocounter=false; }
-	  if($provider_counter=='Hybridshare'){ $enablehybridshare="checked=checked";$autocounter=false; }
-	}
-/*	if($autocounter==true) {
-	  $enablefblike="checked=checked";
-	  $enabletweet="checked=checked";
-	  $enablegshare="checked=checked";
-	  $enablepinterestshare="checked=checked";
-	  $enablehybridshare="checked=checked";
-	}*/
-	// LoginRadius admin UI.
 	$html.='
 	<link href="'.__PS_BASE_URI__.'modules/sociallogin/socialloginandsocialshare.css" rel="stylesheet" type="text/css" media="all" />
 	<script type="text/javascript" src="'.__PS_BASE_URI__.'modules/sociallogin/checkapi.js"></script>
@@ -729,29 +457,6 @@ SQLQUERY;
 	}
 	}
 	$(document).ready(function() {
-	function m(n, d){
-	P = Math.pow;
-	R = Math.round
-	d = P(10, d);
-	i = 7;
-	while(i) {
-	(s = P(10, i-- * 3)) <= n && (n = R(n * d / s) / d + "KMGTPE"[i])
-	}
-	return n;
-	}
-	$.ajax({
-	url: "http://api.twitter.com/1/users/show.json",
-	data: {
-	screen_name: "LoginRadius"
-	},
-	dataType: "jsonp",
-	success: function(data) {
-	count = data.followers_count;
-	$("#followers").html(m(count, 1));
-	}
-	});
-	});
-	$(document).ready(function() {
 	$("div.productTabs").find("a").each(function() {
 	$(this).attr("href", "javascript:void(0)");
 	});
@@ -765,6 +470,9 @@ SQLQUERY;
 	$(function() {
 	$( "#sortable" ).sortable();
 	$( "#sortable" ).disableSelection();
+	$( "#verticalsortable" ).sortable();
+	$( "#verticalsortable" ).disableSelection();
+	
 	});
 	});
 	function hidetextbox(hide){		
@@ -774,27 +482,36 @@ SQLQUERY;
 	$("#redirecturl").show();	
 	}		
 	}		
-	window.onload = function (){		
-	hidetextbox('.$jsVal.');		
+	window.onload = function (){
+	counterproviderlist('.json_encode($countericons).');	
+	sharingproviderlist();	
+	verticalsharingproviderlist();
+	verticalcounterproviderlist('.json_encode($verticalcountericons).');	
+	Makehorivisible();
+	hidetextbox('.$jsVal.');	
+	show_profilefield('.$user_profile_value.');	
 	}	
 	</script>
+	<div>';
+	if($API_KEY =='' && $API_SECRET =='') {
+	$html.='<div title="warning" style="background-color: #FFFFE0; border:1px solid #E6DB55; margin-bottom:5px; width: 900px;padding: 4px 2px 2px 30px;background-image: url(../modules/sociallogin/img/warning.png);background-repeat: no-repeat;background-position:left;">'.$this->l('To activate the Social Login, insert LoginRadius API Key and Secret in the API Settings section below. Social Sharing do not require API Key and Secret.').'</div>';
+	}
+	$html.='<div style="float:left; width:70%;">
 	<div>
-	<div style="float:left; width:70%;">
-	<div>
-	<fieldset class="sociallogin_form sociallogin_form_main" style="background:#EAF7FF; border: 1px solid #B3E2FF;">
+	<fieldset class="sociallogin_form sociallogin_form_main" style="background: none repeat scroll 0 0 #FFFFE0;border: 1px solid #E6DB55;">
 	<div class="row row_title" style="color: #000000; font-weight:normal; background:none;">
-	<strong>Thank you for installing the LoginRadius Prestashop Extension!</strong>
+	<strong>'.$this->l('Thank you for installing the LoginRadius Prestashop Extension!').'</strong>
 	</div>
 	<div class="row" style="color: #000000;width:90%; line-height:160%; background:none;">
-	To activate the extension, please configure it and manage the social networks from you LoginRadius account. If you do not have an account, click<a href="http://www.loginradius.com" target="_blank"> here </a>and create one for FREE!
+	'.$this->l('To activate the extension, please configure it and manage the social networks from you LoginRadius account. If you do not have an account, click').'<a href="http://www.loginradius.com" target="_blank"> here </a>'.$this->l('and create one for FREE!').'
 	</div>
 	<div class="row" style="color: #000000; width:90%; line-height:160%; background:none;">
-	We also have Social Plugin for <a href="https://www.loginradius.com/loginradius-cms-social-plugins/joomla-extension" target="_blank">Joomla</a>,<a href="https://www.loginradius.com/loginradius-cms-social-plugins/wordpress-plugin" target="_blank">WordPress</a>, <a href="https://www.loginradius.com/loginradius-cms-social-plugins/drupal-module" target="_blank">Drupal</a>, <a href="https://www.loginradius.com/loginradius-cms-social-plugins/vbulletin-forum-add-on" target="_blank">vBulletin</a>, <a href="https://www.loginradius.com/loginradius-cms-social-plugins/vanilla-forum-add-on" target="_blank">VanillaForum</a>, <a href="https://www.loginradius.com/loginradius-cms-social-plugins/magento-extension" target="_blank">Magento</a>, <a href="https://www.loginradius.com/loginradius-cms-social-plugins/oscommerce-addon" target="_blank">osCommerce</a>, <a href="https://www.loginradius.com/loginradius-cms-social-plugins/x-cart-module" target="_blank">X-Cart</a>, <a href="https://www.loginradius.com/loginradius-cms-social-plugins/zencart-plugin" target="_blank">Zen-Cart</a>, <a href="https://www.loginradius.com/loginradius-cms-social-plugins/dotnetnuke-module" target="_blank">DotNetNuke</a> and <a href="https://www.loginradius.com/loginradius-cms-social-plugins/blogengine-extension" target="_blank">BlogEngine</a>!
+	'.$this->l('We also have Social Plugin for').' <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#joomlaextension" target="_blank">Joomla</a>,<a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#wordpressplugin" target="_blank">WordPress</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#drupalmodule" target="_blank">Drupal</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#vbulletinplugin" target="_blank">vBulletin</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#vanillaaddons" target="_blank">VanillaForum</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#magentoextension" target="_blank">Magento</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#osCommerceaddons" target="_blank">osCommerce</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#xcartextension" target="_blank">X-Cart</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#zencartplugin" target="_blank">Zen-Cart</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#dotnetnukemodule" target="_blank">DotNetNuke</a> and <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#blogengineextension" target="_blank">BlogEngine</a>!
 	</div>
 	<div class="row row_button" style="background:none; border:none; background:none;">
 	<div class="button2-left">
 	<div class="blank" style="margin:0 0 10px 0;">
-	<div class="button" style="float:left;cursor:pointer;">  <a class="modal" href="http://www.loginradius.com/" target="_blank">Set up my FREE account!</a></div>
+	<div class="button" style="float:left; cursor:pointer;">  <a class="modal" href="http://www.loginradius.com/" target="_blank">'.$this->l('Set up my FREE account!').'</a></div>
 	</div>
 	</div>
 	</div>
@@ -802,31 +519,31 @@ SQLQUERY;
 	</div>
 	<form action="'.$_SERVER['REQUEST_URI'].'" method="post" enctype="multipart/form-data">
 	<dl id="pane" class="tabs">
-	<dt class="panel1 open" id="panel1"  style="cursor:pointer;" onclick=javascript:panelshow("first") ><span>Social Login</span></dt>
-	<dt class="panel2 closed" id="panel2" style="cursor:pointer;" onclick=javascript:panelshow("second") ><span>Social Share</span></dt>
-	<dt class="panel3 closed" id="panel3" style="cursor:pointer;" onclick=javascript:panelshow("third") ><span>Social Counter</span></dt>
+	<dt class="panel1 open" id="panel1"  style="cursor:pointer;" onclick=javascript:panelshow("first") ><span>'.$this->l('API Settings').'</span></dt>
+	<dt class="panel2 closed" id="panel2" style="cursor:pointer;" onclick=javascript:panelshow("second") ><span>'.$this->l('Social Login').'</span></dt>
+	<dt class="panel3 closed" id="panel3" style="cursor:pointer;" onclick=javascript:panelshow("third") ><span>'.$this->l('Social Share').'</span></dt>
 	</dl>
 	<div class="current">
 	<dd><div style="display:block;" id="first">	
 	<table class="form-table sociallogin_table">
 	<tr>
-	<th class="head" colspan="2">LoginRadius API Settings</small></th>
+	<th class="head" colspan="2">'.$this->l('LoginRadius API Settings.').'</small></th>
 	</tr>
 	<tr >
 	<input id="connection_url" type="hidden" value="'.__PS_BASE_URI__.'" />
-	<td colspan="2" ><span class="subhead"> To activate the plugin, insert LoginRadius API Key & Secret<a href="http://support.loginradius.com/customer/portal/articles/677100-how-to-get-loginradius-api-key-and-secret" target="_blank"> (How to get it?) </a></span>
+	<td colspan="2" ><span class="subhead"> '.$this->l('To activate the plugin, insert LoginRadius API Key & Secret').'<a href="http://support.loginradius.com/customer/portal/articles/677100-how-to-get-loginradius-api-key-and-secret" target="_blank" style="color: #0088CC;"> '.$this->l('(How to get it?)').' </a></span>
 	<br/><br />
-	API Key &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="text" size="50" name="API_KEY" id="API_KEY" value="'.$API_KEY.'" />
+	'.$this->l('API Key').' &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="text" size="50" name="API_KEY" id="API_KEY" value="'.$API_KEY.'" />
 	<br /><br />
-	API Secret	&nbsp;&nbsp;<input type="text" name="API_SECRET" id="API_SECRET"  size="50" value="'.$API_SECRET.'" />
+	'.$this->l('API Secret').'	&nbsp;&nbsp;<input type="text" name="API_SECRET" id="API_SECRET"  size="50" value="'.$API_SECRET.'" />
 	</td>
 	</tr>
 	<tr class="row_white">
-	<td colspan="2" ><span class="subhead">What API Connection Method do you prefer to enable API communication?</span>
+	<td colspan="2" ><span class="subhead">'.$this->l('What API Connection Method do you prefer to enable API communication?').'</span>
 	<br /><br />
-	<input type="radio" name="CURL_REQ" id="CURL_REQ" value="0" '.(!Tools::getValue('CURL_REQ', Configuration::get('CURL_REQ')) ? 'checked="checked" ' : '').' />Use cURL (Recommended API connection method but sometimes this is disabled at hosting server.) 
+	<input type="radio" name="CURL_REQ" id="CURL_REQ" value="0" '.(!Tools::getValue('CURL_REQ', Configuration::get('CURL_REQ')) ? 'checked="checked" ' : '').' />'.$this->l('Use cURL (Recommended API connection method but sometimes this is disabled at hosting server.)').' 
 	<br /><br />
-	<input type="radio" name="CURL_REQ" id="FSOCKOPEN_REQ" value="1" '.(Tools::getValue('CURL_REQ', Configuration::get('CURL_REQ')) ? 'checked="checked" ' : '').'/>Use FSOCKOPEN (Choose this option, if cURL is disabled at your hosting server.) 
+	<input type="radio" name="CURL_REQ" id="FSOCKOPEN_REQ" value="1" '.(Tools::getValue('CURL_REQ', Configuration::get('CURL_REQ')) ? 'checked="checked" ' : '').'/>'.$this->l('Use FSOCKOPEN (Choose this option, if cURL is disabled at your hosting server.)').'
 	</td>
 	</tr>
 	<tr class="row_white">
@@ -834,7 +551,7 @@ SQLQUERY;
 	<div class="row row_button" style="background:none;">
 	<div class="button2-left">
 	<div class="blank">
-	<input type="button" class="button" name="verify_api_setting"  size="50" value="Verify API Settings" onclick="MakeRequest()" style="cursor:pointer;"/>
+	<input type="button" class="button" name="verify_api_setting"  size="50" value="'.$this->l('Verify API Settings').'" onclick="MakeRequest()" style="cursor:pointer;"/>
 	</a>
 	</div>
 	</div>
@@ -843,180 +560,190 @@ SQLQUERY;
 	<td><div id="ajaxDiv" style="font-weight:bold;"></div></td>
 	</tr>
 	</table>
+	</dd>
+	<dd><div style="display:none;" id="second">	
+	<table class="form-table sociallogin_table">
+	<tr><th class="head" colspan="2">'.$this->l('LoginRadius Social Login Setting').'</small></th></tr>
+	<tr><td colspan="2" ><span class="subhead">'.$this->l('Do you want to enable Social Login for your website?').'</span><br /><br />
+	<input type="radio" name="enable_social_login" value="0" '.(Tools::getValue('enable_social_login', Configuration::get('enable_social_login'))==0 ? 'checked="checked"' : '').' />'.$this->l('Yes').'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	<input type="radio" name="enable_social_login" value="1" '.(Tools::getValue('enable_social_login', Configuration::get('enable_social_login'))==1 ? 'checked="checked"' : '').' />'.$this->l('No').'
+	</td>
+	</tr>
+	</table>
+	<table class="form-table sociallogin_table">
+	<tr><th class="head" colspan="2">'.$this->l('Social Login Interface Customization').'</small></th></tr>
+	<tr><td colspan="2" ><span class="subhead">'.$this->l('How many social icons would you like to be displayed per row?').'</span><br /><br />
+	<input type="text" name="social_login_icon_column" id="social_login_icon_column"  size="-7" value="'.$social_login_icon_column.'" />
+	</td>
+	</tr>
+	<tr class="row_white"><td colspan="2" ><span class="subhead">'.$this->l('What background color would you like to use for the Social Login interface?').'<a title="'.$this->l('Leave empty for transparent. You can enter hexa-decimal code of the color as well as name of the color.').'" href="javascript:void(0)" style="text-decoration:none;color: #0088CC;">(?)</a></span><br /><br />
+	<input type="text" name="social_login_background_color" id="social_login_background_color"  size="50" value="'.$social_login_background_color.'" />
+	</td>
+	</tr>
+	</table>
 	<table class="form-table sociallogin_table">
 	<tr>
-	<th class="head" colspan="2">LoginRadius Basic Settings</small></th>
+	<th class="head" colspan="2">'.$this->l('LoginRadius Basic Settings.').'</small></th>
 	</tr>
 	
-	<tr>
-	<td colspan="2" ><span class="subhead">Where do you want to redirect your users after successfully logging in?</span><br /><br />
-	<input name="LoginRadius_redirect" value="backpage" type="radio" onclick="javascript:hidetextbox(1);" '.$checked[0].' /> Redirect to Same page (Same as traditional login) <br/>
-	<input name="LoginRadius_redirect" value="profile" type="radio" onclick="javascript:hidetextbox(1);" '.$checked[1].' /> Redirect to the profile <br/>
-	<input name="LoginRadius_redirect" value="url" type="radio" onclick="javascript:hidetextbox(0);" '.$checked[2].' /> Redirect to the following url:<br/>
+	<tr >
+	<td colspan="2" ><span class="subhead">'.$this->l('Where do you want to redirect your users after successfully logging in?').'</span><br /><br />
+	<input name="LoginRadius_redirect" value="backpage" type="radio" onclick="javascript:hidetextbox(1);" '.$checked[0].' /> '.$this->l('Redirect to Same page (Same as traditional login)').' <br/>
+	<input name="LoginRadius_redirect" value="profile" type="radio" onclick="javascript:hidetextbox(1);" '.$checked[1].' /> '.$this->l('Redirect to the profile').' <br/>
+	<input name="LoginRadius_redirect" value="url" type="radio" onclick="javascript:hidetextbox(0);" '.$checked[2].' /> '.$this->l('Redirect to the following url:').'<br/>
 	<input style ="display:none;" type="text" name="redirecturl" id="redirecturl"  size="40" value="'.$redirect.'" />
 	</td>
 	</tr>	
-	<tr> <td colspan="2" >Please enter the Title to be shown on Social Login interface<br/><input type="text" name="TITLE"  size="50" value="'.$Title.'" /></td></tr>
-	<tr class="row_white">
-	<td colspan="2" ><span class="subhead">Do you want your existing user to automatically link to their social accounts in case their Prestashop account email address matches with their social account email ID?</span><br /><br />
+	<tr class="row_white"> <td colspan="2" ><span class="subhead">'.$this->l('Please enter the Title to be shown on Social Login interface').'</span><br/><input type="text" name="TITLE"  size="50" value="'.$Title.'" /></td></tr>
+	<tr >
+	<td colspan="2" ><span class="subhead">'.$this->l('Do you want your existing user to automatically link to their social accounts in case their Prestashop account email address matches with their social account email ID?').'</span><br /><br />
 	
-	<input type="radio" name="ACC_MAP" value="0" '.(!Tools::getValue('ACC_MAP', Configuration::get('ACC_MAP')) ? 'checked="checked" ' : '').'/>YES, link social accounts to Prestashop account<br /><br />
-	<input type="radio" name="ACC_MAP" value="1"  '.(Tools::getValue('ACC_MAP', Configuration::get('ACC_MAP')) ? 'checked="checked" ' : '').'/> NO, I want my existing users to continue using native Prestashop login
+	<input type="radio" name="ACC_MAP" value="0" '.(!Tools::getValue('ACC_MAP', Configuration::get('ACC_MAP')) ? 'checked="checked" ' : '').'/>'.$this->l('YES, link social accounts to Prestashop account').'<br /><br />
+	<input type="radio" name="ACC_MAP" value="1"  '.(Tools::getValue('ACC_MAP', Configuration::get('ACC_MAP')) ? 'checked="checked" ' : '').'/> '.$this->l('NO, I want my existing users to continue using native Prestashop login').'
+	</td>
+	</tr>
+	<tr class="row_white">
+	<td colspan="2" ><span class="subhead">'.$this->l('Do you want to send emails to admin after new User registrations at your website?').'</span><br /><br />
+	
+	<input type="radio" name="SEND_REQ" value="1" '.(Tools::getValue('SEND_REQ', Configuration::get('SEND_REQ')) ? 'checked="checked" ' : '').'/> '.$this->l('Yes').'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	<input type="radio" name="SEND_REQ" value="0"  '.(!Tools::getValue('SEND_REQ', Configuration::get('SEND_REQ')) ? 'checked="checked" ' : '').'/> '.$this->l('No').'
 	</td>
 	</tr>
 	<tr>
-	<td colspan="2" ><span class="subhead">Do you want to send emails to admin after new User registrations at your website?</span><br /><br />
+	<td colspan="2" ><span class="subhead">'.$this->l('Do you want to send emails to customer after new User registrations at your website?').'</span><br /><br />
 	
-	<input type="radio" name="SEND_REQ" value="1" '.(Tools::getValue('SEND_REQ', Configuration::get('SEND_REQ')) ? 'checked="checked" ' : '').'/> Yes&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	<input type="radio" name="SEND_REQ" value="0"  '.(!Tools::getValue('SEND_REQ', Configuration::get('SEND_REQ')) ? 'checked="checked" ' : '').'/> No
+	<input type="radio" name="user_notification" value="0" '.(!Tools::getValue('user_notification', Configuration::get('user_notification')) ? 'checked="checked" ' : '').'/> '.$this->l('Yes').'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	<input type="radio" name="user_notification" value="1"  '.(Tools::getValue('user_notification', Configuration::get('user_notification')) ? 'checked="checked" ' : '').'/> '.$this->l('No').'
 	</td>
 	</tr>
 	<tr class="row_white">
-	<td colspan="2" ><span class="subhead">Do you want to send emails to customer after new User registrations at your website?</span><br /><br />
+	<td colspan="2" ><span class="subhead">'.$this->l('Do you want users to provide required Prestashop profile fields before completing registration process? (A pop-up will open asking user to provide details of the fields not coming from Social ID provider)').'</span><br /><br />
 	
-	<input type="radio" name="user_notification" value="0" '.(!Tools::getValue('user_notification', Configuration::get('user_notification')) ? 'checked="checked" ' : '').'/> Yes&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	<input type="radio" name="user_notification" value="1"  '.(Tools::getValue('user_notification', Configuration::get('user_notification')) ? 'checked="checked" ' : '').'/> No
+	<input type="radio" name="user_require_field" onchange="show_profilefield(this.value);" value="1" '.(Tools::getValue('user_require_field', Configuration::get('user_require_field')) ? 'checked="checked" ' : '').'/> '.$this->l('Yes').'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	<input type="radio" name="user_require_field"  onchange="show_profilefield(this.value);" value="0"  '.(!Tools::getValue('user_require_field', Configuration::get('user_require_field')) ? 'checked="checked" ' : '').'/> '.$this->l('No').'
+	<table class="form-table sociallogin_table1" id="profilefield_display" style="display:block;">
+	<tr>
+	<td>
+	<input type="checkbox" name="profilefield[]" value="1"  '.(strpos($profilefield,'1') !== false ? 'checked="checked"' : '').' /> '.$this->l('First Name').'</td><td>
+	<input type="checkbox" name="profilefield[]" value="2" '.(strpos($profilefield,'2') !== false? 'checked="checked"' : '').' /> '.$this->l('Last Name').'</td><td>
+	<input type="checkbox" name="profilefield[]" value="3" '.(strpos($profilefield,'3') !== false? 'checked="checked"' : '').' /> '.$this->l('Country').'</td><td>
+	<input type="checkbox" name="profilefield[]" value="4" '.(strpos($profilefield,'4') !== false? 'checked="checked"' : '').' /> '.$this->l('City').'</td><td>
+	<input type="checkbox" name="profilefield[]" value="5" '.(strpos($profilefield,'5') !== false? 'checked="checked"' : '').' /> '.$this->l('Mobile Number').'</td><td>
+	<input type="checkbox" name="profilefield[]" value="6" '.(strpos($profilefield,'6') !== false ? 'checked="checked"' : '').' /> '.$this->l('Address').'</td><td>
+	<input type="checkbox" name="profilefield[]" value="7" '.(strpos($profilefield,'7') !== false ? 'checked="checked"' : '').' /> '.$this->l('Address Alias').'
+	<input type="checkbox" name="profilefield[]" value="8" '.(strpos($profilefield,'8') !== false ? 'checked="checked"' : '').' /> '.$this->l('Zip Code').'
 	</td>
 	</tr>
-	<tr >
-	<td colspan="2" ><span class="subhead">Do you want users to provide required Prestashop profile fields before completing registration process? (A pop-up will open asking user to provide details of the fields not coming from Social ID provider)</span><br /><br />
-	
-	<input type="radio" name="user_require_field" value="1" '.(Tools::getValue('user_require_field', Configuration::get('user_require_field')) ? 'checked="checked" ' : '').'/> Yes&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	<input type="radio" name="user_require_field" value="0"  '.(!Tools::getValue('user_require_field', Configuration::get('user_require_field')) ? 'checked="checked" ' : '').'/> No
+	</table>
 	</td>
-	</tr>
-	
-	<tr class="row_white">
-	<td colspan="2" ><span class="subhead">A few ID Providers do not supply users e-mail IDs as part of user profile data. Do you want users to provide their email IDs before completing registration process?</span><br /><br />
-	
-	<input type="radio" name="EMAIL_REQ" value="0" '.(!Tools::getValue('EMAIL_REQ', Configuration::get('EMAIL_REQ')) ? 'checked="checked" ' : '').' />YES, get real email IDs from the users (Ask users to enter their email IDs in a pop-up)<br /><br />
-	<input type="radio" name="EMAIL_REQ" value="1" '.(Tools::getValue('EMAIL_REQ', Configuration::get('EMAIL_REQ')) ? 'checked="checked" ' : '').'/>NO, just auto-generate random email IDs for the users
+	</tr>	
+	<tr>
+	<td colspan="2" ><span class="subhead">'.$this->l('A few ID Providers do not supply users e-mail IDs as part of user profile data. Do you want users to provide their email IDs before completing registration process?').'</span><br /><br />
+	<input type="radio" name="EMAIL_REQ" value="0" '.(!Tools::getValue('EMAIL_REQ', Configuration::get('EMAIL_REQ')) ? 'checked="checked" ' : '').' />'.$this->l('YES, get real email IDs from the users (Ask users to enter their email IDs in a pop-up)').'<br /><br />
+	<input type="radio" name="EMAIL_REQ" value="1" '.(Tools::getValue('EMAIL_REQ', Configuration::get('EMAIL_REQ')) ? 'checked="checked" ' : '').'/>'.$this->l('NO, just auto-generate random email IDs for the users').'
 	</td>
 	</tr>
 	<tr >
 	<input id="connection_url" type="hidden" value="" />
-	</tr><tr><td>
-	<span class="subhead">Please enter the message to be displayed to the user in the pop-up</span><br /><br /><input type="text" name="POPUP_TITLE"  size="50" value="'.(empty($POPUP_TITLE)?'Please fill the following details to complete the registration':$POPUP_TITLE).'" />
+	</tr><tr class="row_white"><td>
+	<span class="subhead">'.$this->l('Please enter the message to be displayed to the user in the pop-up').'</span><br /><br /><input type="text" name="POPUP_TITLE"  size="50" value="'.(empty($POPUP_TITLE)?$this->l("Please fill the following details to complete the registration"):$POPUP_TITLE).'" />
 	<br /></td></tr>
-	<tr class="row_white">
+	<tr>
 	<td>
-	<span class="subhead">Please enter the message to be shown to the user in case of an invalid entry in popup</span><br /><br /><input type="text" name="ERROR_MESSAGE"  size="50" value="'.(empty($ERROR_MESSAGE)?"Please enter the following fields":$ERROR_MESSAGE).'" />	
+	<span class="subhead">Please enter the message to be shown to the user in case of an invalid entry in popup</span><br /><br /><input type="text" name="ERROR_MESSAGE"  size="50" value="'.(empty($ERROR_MESSAGE)?$this->l("Please enter the following fields"):$ERROR_MESSAGE).'" />	
+	</td>
+	</tr>
+	</table>
+	<table class="form-table sociallogin_table">
+	<tr>
+	<th class="head" colspan="2">'.$this->l('User Profile Data Option').'</small></th>
+	</tr>
+	<tr>
+	<td colspan="2" ><span class="subhead">'.$this->l('Do you want to update User Profile Data in your Vanilla database, every time user logs into your website?').'<a title="'.$this->l('If you disable this option, user profile data will be saved only once when user logs in first time at your website, user profile details will not be updated in your Vanilla database, even if user changes his/her social account details.').'" href="javascript:void(0)" style="text-decoration:none"> (<span style="color:#3CF;">?</span>)</a></span><br /><br />
+	<input type="radio" name="update_user_profile" value="0" '.(!Tools::getValue('update_user_profile', Configuration::get('update_user_profile')) ? 'checked="checked" ' : '').' />'.$this->l(' Yes').'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	<input type="radio" name="update_user_profile" value="1" '.(Tools::getValue('update_user_profile', Configuration::get('update_user_profile')) ? 'checked="checked" ' : '').'/>'.$this->l(' No').'
 	</td>
 	</tr>
 	</table>
 	</div></dd>
 	<!-- social share -->
-	<dd><div style="display:none;" id="second">
+	<dd><div style="display:none;" id="third">
 	<table class="form-table sociallogin_table">
 	<tr>
-	<th class="head" colspan="2">LoginRadius Social Share Settings</small></th>
+	<th class="head" colspan="2">'.$this->l('LoginRadius Social Share Settings').'</small></th>
 	</tr>
-	<tr><td colspan="2" ><span class="subhead">Do you want to enable Social Sharing for your website?</span><br /><br />
-	<input type="radio" name="enable_social_sharing" value="1" '.(Tools::getValue('enable_social_sharing', Configuration::get('enable_social_sharing'))==1 ? 'checked="checked"' : '').' />Yes&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	<input type="radio" name="enable_social_sharing" value="0" '.(Tools::getValue('enable_social_sharing', Configuration::get('enable_social_sharing'))==0 ? 'checked="checked"' : '').' />No
+	<tr><td colspan="2" ><span class="subhead">'.$this->l('Do you want to enable Social Sharing for your website?').'</span><br /><br />
+	<input type="radio" name="enable_social_sharing" value="0" '.(Tools::getValue('enable_social_sharing', Configuration::get('enable_social_sharing'))==0 ? 'checked="checked"' : '').' />'.$this->l('Yes').'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	<input type="radio" name="enable_social_sharing" value="1" '.(Tools::getValue('enable_social_sharing', Configuration::get('enable_social_sharing'))==1 ? 'checked="checked"' : '').' />'.$this->l('No').'
 	</td>
 	</tr>
 	<tr class="row_white">
-	<td colspan="2" ><span class="subhead">Enter the text that you wish to be displayed above the Social Sharing Interface. Leave the field blank if you dont want any text to be displayed.</span>
-	<br/><input type="text" name="social_share_pretext" value="'.$social_share_pretext.'" />
+	<td colspan="2" >
+	<span class="subhead">'.$this->l('What Social Sharing widget theme do you want to use across your website?').'</span><br /><br />';
+	  $style_visible= 'style="position:absolute;border-bottom:8px solid #EBEBEB; border-right:8px solid transparent; border-left:8px solid transparent; margin:19px 0 0 -106px"';
+	$html.='<a id="mymodal" href="javascript:void(0);" onclick="Makehorivisible();"><b>'.$this->l('Horizontal').'</b></a> &nbsp;|&nbsp; 
+	<a class="mymodal" href="javascript:void(0);" onclick="Makevertivisible();"><b>'.$this->l('Vertical').'</b></a>
+	<table style="border:#dddddd 1px solid; padding:10px; background:#FFFFFF; margin:10px 0 0 0;">
+	<span id = "arrow" '.$style_visible.'></span>
+	<tr id="enable_social_horizontal_sharing" style="background:#EBEBEB;"><td colspan="2" >
+	<span class="subhead">'.$this->l('Do you want to enable Horizontal Social Sharing for your website?').'</span><br /><br />
+	<input type="radio" name="enable_social_horizontal_sharing" value="0" '.(Tools::getValue('enable_social_horizontal_sharing', Configuration::get('enable_social_horizontal_sharing'))==0 ? 'checked="checked"' : '').' />'.$this->l('Yes').'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	<input type="radio" name="enable_social_horizontal_sharing" value="1" '.(Tools::getValue('enable_social_horizontal_sharing', Configuration::get('enable_social_horizontal_sharing'))==1 ? 'checked="checked"' : '').' />'.$this->l('No').'
 	</td>
 	</tr>
-	<tr>
-	<td colspan="2" ><span class="subhead">What Social Sharing widget theme do you want to use across your website?</span><br /><br />';
-	$chooseshare =Configuration::get('chooseshare');
-	if($chooseshare == '' || $chooseshare == '0' || $chooseshare == '1' || $chooseshare == '2' || $chooseshare == '3'){
-	  $style_visible= 'style="position:absolute;border-bottom:8px solid #ffffff; border-right:8px solid transparent; border-left:8px solid transparent; margin:-18px 0 0 2px"';}
-   else{ $style_visible='style="position:absolute;border-bottom:8px solid #ffffff;border-right:8px solid transparent; border-left:8px solid transparent; margin:-18px 0 0 70px;"';}
-	$html.='<a id="mymodal" href="javascript:void(0);" onclick="Makehorivisible();"><b>Horizontal</b></a> &nbsp;|&nbsp; 
-	<a class="mymodal" href="javascript:void(0);" onclick="Makevertivisible();"><b>Vertical</b></a>
-	<div style="border:#dddddd 1px solid; padding:10px; background:#FFFFFF; margin:10px 0 0 0;">
-	<span id = "arrow" '.$style_visible.'></span>';
-	$chooseshare =Configuration::get('chooseshare');
-	if($chooseshare == '' || $chooseshare == '0' || $chooseshare == '1' || $chooseshare == '2' || $chooseshare == '3'){$show_block='style=display:block';}
-	else {$show_block='style=display:none';}
-	$html.='<div id="sharehorizontal" '.$show_block.'>
-	<input name="chooseshare" id = "hori32" '.$hori32.' type="radio"  value="0" style="margin: 2px 10px 0 0; display: block; float: left !important;" /> <img src = "../modules/sociallogin/img/horizonSharing32.png"/><br /><br />
-	<input name="chooseshare" id = "hori16" '.$hori16.' type="radio" value="1" style="margin: 2px 10px 0 0; display: block; float: left !important;" /> <img src = "../modules/sociallogin/img/horizonSharing16.png" /><br /><br />
-	<input name="chooseshare" id = "horithemelarge" '.$horithemelarge.' type="radio" value="2" style="margin: 2px 10px 0 0; display: block; float: left !important;" /> <img src = "../modules/sociallogin/img/single-image-theme-large.png" /><br /><br />
-	<input name="chooseshare" id = "horithemesmall" '.$horithemesmall.' type="radio" value="3" style="margin: 2px 10px 0 0; display: block; float: left !important;" /> <img src = "../modules/sociallogin/img/single-image-theme-small.png" />
+	<tr id ="enable_social_vertical_sharing" style="background:#EBEBEB;"><td colspan="2" ><span class="subhead">'.$this->l('Do you want to enable Vertical Social Sharing for your website?').'</span><br /><br />
+	<input type="radio" name="enable_social_vertical_sharing" value="0" '.(Tools::getValue('enable_social_vertical_sharing', Configuration::get('enable_social_vertical_sharing'))==0 ? 'checked="checked"' : '').' />'.$this->l('Yes').'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	<input type="radio" name="enable_social_vertical_sharing" value="1" '.(Tools::getValue('enable_social_vertical_sharing', Configuration::get('enable_social_vertical_sharing'))==1 ? 'checked="checked"' : '').' />'.$this->l('No').'
+	</td>
+	</tr>
+	<tr id="horizontal_text_label" class="row_white">
+	<td colspan="2" ><span class="subhead">'.$this->l('Enter the text that you wish to be displayed above the Social Sharing Interface. Leave the field blank if you dont want any text to be displayed.').'</span>
+	<br/><input type="text" name="social_share_pretext" value="'.Configuration::get('social_share_pretext').'" />
+	</td>
+	</tr>
+	<tr class="sharing_block" style="background:#EBEBEB;"><td><div class="subhead">'.$this->l('Choose a Sharing theme').'</div>';
+	$html.='<div style="padding:10px;margin:10px 0 0 0;"><div id="sharehorizontal" style=display:block>
+	<label for="hori32"><input name="chooseshare" id = "hori32" '.(Configuration::get('chooseshare') == 0  ||  Configuration::get('chooseshare') == '' ? 'checked="checked"' : '').'  type="radio"  value="0" style="margin: 2px 10px 0 0; display: block; float: left !important;" onclick ="loginradius_horizontal_sharing();" /> <img src = "../modules/sociallogin/img/horizonSharing32.png"/><br /><br /></label>
+	<label for="hori16"><input name="chooseshare" id = "hori16" '.(Configuration::get('chooseshare') == 1 ? 'checked="checked"' : '').'  type="radio" value="1" style="margin: 2px 10px 0 0; display: block; float: left !important;" onclick ="loginradius_horizontal_sharing();" /> <img src = "../modules/sociallogin/img/horizonSharing16.png" /><br /><br /></label>
+	<label for="horithemelarge"><input name="chooseshare" id = "horithemelarge" '.(Configuration::get('chooseshare') == 2 ? 'checked="checked"' : '').'  type="radio" value="2" style="margin: 2px 10px 0 0; display: block; float: left !important;" onclick ="loginradius_horizontal_simple();" /> <img src = "../modules/sociallogin/img/single-image-theme-large.png" /><br /><br /></label>
+	<label for="horithemesmall"><input name="chooseshare" id = "horithemesmall" '.(Configuration::get('chooseshare') == 3 ? 'checked="checked"' : '').'  type="radio" value="3" style="margin: 2px 10px 0 0; display: block; float: left !important;" onclick ="loginradius_horizontal_simple();" /> <img src = "../modules/sociallogin/img/single-image-theme-small.png" /><br /><br /></label>
+<label for="hybrid-horizontal-horizontal"> 	<input name="chooseshare" id = "hybrid-horizontal-horizontal"  '.(Configuration::get('chooseshare') == 9 ? 'checked="checked"' : '').'  type="radio" value="9" style="margin: 2px 10px 0 0; display: block; float: left !important;" onclick ="loginradius_horizontal_hybrid();" /><img src = "../modules/sociallogin/img/hybrid-horizontal-horizontal.png" /><br /><br /></label>
+	<label for="hybrid-horizontal-vertical"><input name="chooseshare" id = "hybrid-horizontal-vertical" '.(Configuration::get('chooseshare') == 8 ? 'checked="checked"' : '').'  type="radio" value="8" style="margin: 2px 10px 0 0; display: block; float: left !important;" onclick ="loginradius_horizontal_hybrid();" /> <img src = "../modules/sociallogin/img/hybrid-horizontal-vertical.png" /></label>
 	</div>';
-	$chooseshare =Configuration::get('chooseshare');
-	if($chooseshare== '4' || $chooseshare== '5'){$show_blockvertical='style=display:block';} 
-	else {$show_blockvertical='style=display:none';}
-	$html.='<div id="sharevertical" '.$show_blockvertical.'>
-	<input name="chooseshare" id = "vertibox32" '.$vertibox32.' type="radio" value="4" style="vertical-align:top"/> <img src =  "../modules/sociallogin/img/32VerticlewithBox.png" />
-	<input name="chooseshare" id = "vertibox16" '.$vertibox16.' type="radio" value="5" style="vertical-align:top"/> <img src = "../modules/sociallogin/img/16VerticlewithBox.png" style="vertical-align:top"/><br /><br />
-	<div style="overflow:auto; background:#EBEBEB; padding:10px;">
-	<p style="margin:0 0 6px 0; padding:0px;color:#000000;"><strong>Select the position of Social Sharing widget</strong></p>';
-	$stopleft = "";
-	$stopright = "";
-	$sbottomleft = "";
-	$sbottomright = "";
-	$choosesharepos = (isset($choosesharepos) ? $choosesharepos : "0");
-	$verticalsharetopoffset=(isset($verticalsharetopoffset) ? $verticalsharetopoffset : "");
-	if ($choosesharepos == '0' ) $stopleft = "checked=checked";
-	else if ($choosesharepos == '1' ) $stopright = "checked=checked";
-	else if ($choosesharepos == '2' ) $sbottomleft = "checked=checked";
-	else if ($choosesharepos == '3' ) $sbottomright = "checked=checked";
-	else $stopleft = "checked=checked";
-	$html.='<input name="choosesharepos" id = "topleft" type="radio" '.$stopleft.' value="0" />Top Left<br /> 
-	<input name="choosesharepos" id = "topright" type="radio" '.$stopright.' value="1" />Top Right<br />
-	<input name="choosesharepos" id = "bottomleft" type="radio" '.$sbottomleft.' value="2" />Bottom Left<br /> 
-	<input name="choosesharepos" id = "bottomright" type="radio" '.$sbottomright.' value="3" />Bottom Right<br /><br />
-	<p style="margin:0 0 6px 0; padding:0px;color:#000000;"><strong> <strong>Specify distance of vertical sharing interface from top. (Leave empty for default behaviour)</strong><a title="Enter a number (For example - 200). It will set the \'top\' CSS attribute of the interface to the value specified. Increase in the number pushes interface towards bottom." href="javascript:void(0)" style="text-decoration:none"> (<span style="color:#3CF;">?</span>)</a></strong></p><input type="text" id="topoffset" name="verticalsharetopoffset" value="'.$verticalsharetopoffset.'" >
-	</div></div></div>
+	$html.='<div id="sharevertical" style=display:none>
+	<label for="vertibox32"><input name="chooseverticalshare" id = "vertibox32"  '.(Configuration::get('chooseverticalshare') == 4 || Configuration::get('chooseverticalshare') == '' ? 'checked="checked"' : '').'  type="radio" value="4" style="vertical-align:top" onclick ="loginradius_vertical_sharing();"/> <img src =  "../modules/sociallogin/img/32VerticlewithBox.png" /></label>
+	<label for="vertibox16"><input name="chooseverticalshare" id = "vertibox16" '.(Configuration::get('chooseverticalshare') == 5 ? 'checked="checked"' : '').'  type="radio" value="5" style="vertical-align:top" onclick ="loginradius_vertical_sharing();"/> <img src = "../modules/sociallogin/img/16VerticlewithBox.png" style="vertical-align:top"/></label>
+	<label for="hybrid-verticle-vertical">	<input name="chooseverticalshare" id = "hybrid-verticle-vertical"  '.(Configuration::get('chooseverticalshare') == 6 || Configuration::get('chooseverticalshare') == '' ? 'checked="checked"' : '').'  type="radio" value="6" style="vertical-align:top"  onclick ="loginradius_vertical_counter();" /> <img src =  "../modules/sociallogin/img/hybrid-verticle-vertical.png" /></label>
+<label for="hybrid-verticle-horizontal"> 	<input name="chooseverticalshare" id = "hybrid-verticle-horizontal" '.(Configuration::get('chooseverticalshare') == 7 ? 'checked="checked"' : '').'  type="radio" value="7" style="vertical-align:top" onclick ="loginradius_vertical_counter();"/><img src = "../modules/sociallogin/img/hybrid-verticle-horizontal.png" style="vertical-align:top"/></label>
+	<br /><br />
+	<div style="clear:both;overflow:auto; background:#EBEBEB;; padding:10px;">
+	<p style="margin:0 0 6px 0; padding:0px;color:#000000;"><strong>'.$this->l('Select the position of Social Sharing widget').'</strong></p>';
+	$html.='<input name="choosesharepos" id = "topleft" type="radio" '.(Configuration::get('choosesharepos') == 0 || Configuration::get('choosesharepos') == '' ? 'checked="checked"' : '').' value="0" />Top Left<br /> 
+	<input name="choosesharepos" id = "topright" type="radio" '.(Configuration::get('choosesharepos') == 1 ? 'checked="checked"' : '').' value="1" />Top Right<br />
+	<input name="choosesharepos" id = "bottomleft" type="radio" '.(Configuration::get('choosesharepos') == 2 ? 'checked="checked"' : '').' value="2" />Bottom Left<br /> 
+	<input name="choosesharepos" id = "bottomright" type="radio" '.(Configuration::get('choosesharepos') == 3 ? 'checked="checked"' : '').' value="3" />Bottom Right<br /><br />
+	<p style="margin:0 0 6px 0; padding:0px;color:#000000;"><strong> <strong>'.$this->l('Specify distance of vertical sharing interface from top. (Leave empty for default behaviour)').'</strong><a title="'.$this->l('Enter a number (For example - 200). It will set the \'top\' CSS attribute of the interface to the value specified. Increase in the number pushes interface towards bottom.').'" href="javascript:void(0)" style="text-decoration:none"> (<span style="color:#3CF;">?</span>)</a></strong></p><input type="text" id="topoffset" name="verticalsharetopoffset" value="'.(is_numeric(Configuration::get('verticalsharetopoffset'))? Configuration::get('verticalsharetopoffset').'px':"").'" >
+	</div></div></div></div>
 	</td>
 	</tr>
-	<tr>
-	<td colspan="2" ><span class="subhead">What Sharing Networks do you want to show in the sharing widget? (All other sharing networks will be shown as part of LoginRadius sharing icon)</span><br /><div id="loginRadiusSharingLimit" style="color: red; display: none; margin-bottom: 5px;">You can select only 9 providers.</div>
+	<tr class="label_sharing_networks">
+	<td colspan="2" ><span class="subhead">'.$this->l('What Sharing Networks do you want to show in the sharing widget? (All other sharing networks will be shown as part of LoginRadius sharing icon)').'</span><br /><div id="loginRadiusSharingLimit" style="color: red; display: none; margin-bottom: 5px;">You can select only 9 providers.</div>
 	</td>
 	</tr>
 	<tr>
 	<td>	
 	<table class="form-table sociallogin_table" id="shareprovider">
-	<tr class="row_white">
-	<td style="width:33%;">
-	<input name="shareicons" onchange="loginRadiusSharingLimit(this);loginRadiusRearrangeProviderList(this);" type="checkbox"  '.$enablefb.' value="facebook"  /> '.$this->l('Facebook').'<br />
-	<input name="shareicons" onchange="loginRadiusSharingLimit(this);loginRadiusRearrangeProviderList(this);" type="checkbox"  '.$enabletwitter.' value="twitter"  /> '.$this->l('Twitter').'<br />
-	<input name="shareicons" onchange="loginRadiusSharingLimit(this);loginRadiusRearrangeProviderList(this);" type="checkbox"  '.$enableprint.' value="print"  /> '.$this->l('Print').'<br />
-	<input name="shareicons" onchange="loginRadiusSharingLimit(this);loginRadiusRearrangeProviderList(this);" type="checkbox"  '.$enableemail.' value="email"  /> '.$this->l('Email').'<br />
-	<input name="shareicons" onchange="loginRadiusSharingLimit(this);loginRadiusRearrangeProviderList(this);" type="checkbox"  '.$enablegoogle.' value="google"  /> '.$this->l('Google').'<br />
-	<input name="shareicons" onchange="loginRadiusSharingLimit(this);loginRadiusRearrangeProviderList(this);" type="checkbox"  '.$enablepin.' value="pinterest"  /> '.$this->l('Pinterest').'</td>
-	</td>
-	<td style="width:33%;">		
-	<input name="shareicons" onchange="loginRadiusSharingLimit(this);loginRadiusRearrangeProviderList(this);" type="checkbox"  '.$enabledigg.' value="digg"  /> '.$this->l('Digg').'<br />
-	<input name="shareicons" onchange="loginRadiusSharingLimit(this);loginRadiusRearrangeProviderList(this);" type="checkbox"  '.$enablereddit.' value="reddit"  /> '.$this->l('Reddit').'<br />
-	<input name="shareicons" onchange="loginRadiusSharingLimit(this);loginRadiusRearrangeProviderList(this);" type="checkbox"  '.$enablevk.' value="vkontakte"  /> '.$this->l('Vkontakte').'<br />
-	<input name="shareicons" onchange="loginRadiusSharingLimit(this);loginRadiusRearrangeProviderList(this);" type="checkbox"  '.$enablegplus.' value="googleplus"  /> '.$this->l('GooglePlus').'<br />
-	<input name="shareicons" onchange="loginRadiusSharingLimit(this);loginRadiusRearrangeProviderList(this);" type="checkbox"  '.$enabletumbler.' value="tumblr"  /> '.$this->l('Tumblr').'<br/>
-	<input name="shareicons" onchange="loginRadiusSharingLimit(this);loginRadiusRearrangeProviderList(this);" type="checkbox"  '.$enablelinkedin.' value="linkedin"  /> '.$this->l('LinkedIn').'<br />
-	</td>
-	<td style="width:33%;">		
-	<input name="shareicons" onchange="loginRadiusSharingLimit(this);loginRadiusRearrangeProviderList(this);" type="checkbox"  '.$enablemyspace.' value="myspace"  /> '.$this->l('MySpace').'<br />
-	<input name="shareicons" onchange="loginRadiusSharingLimit(this);loginRadiusRearrangeProviderList(this);" type="checkbox"  '.$enabledeli.' value="delicious"  /> '.$this->l('Delicious').'<br />
-	<input name="shareicons" onchange="loginRadiusSharingLimit(this);loginRadiusRearrangeProviderList(this);" type="checkbox"  '.$enableyahoo.' value="yahoo"  /> '.$this->l('Yahoo').'<br />
-	<input name="shareicons" onchange="loginRadiusSharingLimit(this);loginRadiusRearrangeProviderList(this);" type="checkbox"  '.$enablelive.' value="live"  /> '.$this->l('Live').'<br />
-	<input name="shareicons" onchange="loginRadiusSharingLimit(this);loginRadiusRearrangeProviderList(this);" type="checkbox"  '.$enablehyves.' value="hyves"  /> '.$this->l('Hyves').'<br />
-	<input name="shareicons" onchange="loginRadiusSharingLimit(this);loginRadiusRearrangeProviderList(this);" type="checkbox"  '.$enablednnkicks.' value="dotnetkicks"  />'.$this->l('DotNetKicks') .'
-	</td>
-	</tr>
 	</table>
 	</td>
 	</tr>
-	<tr>
-	<td colspan="2" >
-	<span class="subhead">What sharing network order do you prefer for your sharing widget?</span><br />
+	<tr class="loginradius_rearrange_icons">
+	<td colspan="2" style="background:#EBEBEB;" >
+	<span class="subhead">'.$this->l('What sharing network order do you prefer for your sharing widget?').'</span><br />
 	<ul id="sortable" style="height:35px;">';
 	$li='';
 	$rearrange_settings = unserialize(Configuration::get('rearrange_settings'));
-	$rearrnage_provider_list=$rearrange_settings;
-	if(empty($rearrnage_provider_list))
-	{
-	$rearrange_settings[] = 'facebook';
-	$rearrange_settings[] = 'googleplus';
-	$rearrange_settings[] = 'twitter';
-	$rearrange_settings[] = 'linkedin';
-	$rearrange_settings[] = 'pinterest';
+	if(empty($rearrange_settings)) {
+	$rearrange_settings = array('facebook','googleplus','twitter','linkedin','pinterest');
 	}
 	foreach($rearrange_settings  as $provider){
 	$li.='<li title="'.$provider.'" id="loginRadiusLI'.$provider.'" class="lrshare_iconsprite32 lrshare_'.$provider.'">
@@ -1026,181 +753,109 @@ SQLQUERY;
 	$html.=$li.'</ul>
 	</td>
 	</tr>
+	<tr class="label_verticalsharing_networks">
+	<td colspan="2" ><span class="subhead">'.$this->l('What Sharing Networks do you want to show in the sharing widget? (All other sharing networks will be shown as part of LoginRadius sharing icon)').'</span><br /><div id="loginRadiusverticalSharingLimit" style="color: red; display: none; margin-bottom: 5px;">You can select only 9 providers.</div>
+	</td>
+	</tr>
 	<tr>
+	<td>	
+	<table class="form-table sociallogin_table" id="verticalshareprovider">
+	</table>
+	</td>
+	</tr>
+	<tr class="loginradius_verticalrearrange_icons">
+	<td colspan="2" >
+	<span class="subhead">'.$this->l('What sharing network order do you prefer for your sharing widget?').'</span><br />
+	<ul id="verticalsortable" style="height:35px;">';
+	$li='';
+	$vertical_rearrange_settings = unserialize(Configuration::get('vertical_rearrange_settings'));
+	if(empty($vertical_rearrange_settings)) {
+	$vertical_rearrange_settings = array('facebook','googleplus','twitter','linkedin','pinterest');
+	}
+	foreach($vertical_rearrange_settings  as $provider){
+	$li.='<li title="'.$provider.'" id="loginRadiusverticalLI'.$provider.'" class="lrshare_iconsprite32 lrshare_'.$provider.'">
+	<input type="hidden" name="vertical_rearrange_settings[]" value="'.$provider.'" />
+	</li>';
+	}
+	$html.=$li.'</ul>
+	</td>
+	</tr>
+	<tr class="horizontal_location">
 	<td>
-	<span class="subhead">'.$this->l('Social Share Location').'</span>
-	<table class="form-table sociallogin_table">
-	<tr class="row_white">
+	<span class="subhead">'.$this->l('What area(s) do you want to show the social sharing widget?').'</span>
+	<table class="form-table">
+	<tr>
 	<td>';
 	if(Tools::getValue('social_share_home')==0 && Tools::getValue('social_share_cart')==0 && Tools::getValue('social_share_product')==0) {
 	Configuration::updateValue('social_share_home', 1);
 	}
-	$html.='<input type="checkbox" name="social_share_home" value="1" '.(Tools::getValue('social_share_home', Configuration::get('social_share_home')) ? 'checked="checked"' : '').' />Show on Home page<br/>
-	<input type="checkbox" name="social_share_cart" value="1" '.(Tools::getValue('social_share_cart', Configuration::get('social_share_cart')) ? 'checked="checked"' : '').' />Show on Cart page<br/>
-	<input type="checkbox" name="social_share_product" value="1" '.(Tools::getValue('social_share_product', Configuration::get('social_share_product')) ? 'checked="checked"' : '').' />Show on Product Page<br/>
+	$html.='<input type="checkbox" name="social_share_home" value="1" '.(Tools::getValue('social_share_home', Configuration::get('social_share_home')) ? 'checked="checked"' : '').' />Show on Home page</td><td>
+	<input type="checkbox" name="social_share_cart" value="1" '.(Tools::getValue('social_share_cart', Configuration::get('social_share_cart')) ? 'checked="checked"' : '').' />Show on Cart page</td><td>
+	<input type="checkbox" name="social_share_product" value="1" '.(Tools::getValue('social_share_product', Configuration::get('social_share_product')) ? 'checked="checked"' : '').' />Show on Product Page
+	</td>
+	</tr>
+	
+	</table>
+	</td>
+	</tr>
+		<tr class ="vertical_location">
+	<td>
+	<span class="subhead">'.$this->l('What area(s) do you want to show the social sharing widget?').'</span>
+	<table class="form-table">
+	<tr>
+	<td>';
+	if(Tools::getValue('social_verticalshare_home')==0 && Tools::getValue('social_verticalshare_cart')==0 && Tools::getValue('social_verticalshare_product')==0) {
+	Configuration::updateValue('social_verticalshare_home', 1);
+	}
+	$html.='<input type="checkbox" name="social_verticalshare_home" value="1" '.(Tools::getValue('social_verticalshare_home', Configuration::get('social_verticalshare_home')) ? 'checked="checked"' : '').' />Show on Home page</td><td>
+	<input type="checkbox" name="social_verticalshare_cart" value="1" '.(Tools::getValue('social_verticalshare_cart', Configuration::get('social_verticalshare_cart')) ? 'checked="checked"' : '').' />Show on Cart page</td><td>
+	<input type="checkbox" name="social_verticalshare_product" value="1" '.(Tools::getValue('social_verticalshare_product', Configuration::get('social_verticalshare_product')) ? 'checked="checked"' : '').' />Show on Product Page
 	</td>
 	</tr>
 	</table>
+	</td></tr></table>
 	</td>
 	</tr>
 	</table>
 	</div></dd>	
-	<dd>
-	<div style="display:none;" id="third">
-	<table class="form-table sociallogin_table">
-	<tr>
-	<th class="head" colspan="2">LoginRadius Social Counter Settings</small></th>
-	</tr>
-	<tr>
-	<td colspan="2" ><span class="subhead">Do you want to enable Social Counter for your website?</span><br /><br />
-	
-	<input type="radio" name="enable_social_counter" value="1" '.(Tools::getValue('enable_social_counter', Configuration::get('enable_social_counter'))==1 ? 'checked="checked"' : '').' />Yes&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	<input type="radio" name="enable_social_counter" value="0" '.(Tools::getValue('enable_social_counter', Configuration::get('enable_social_counter'))==0 ? 'checked="checked"' : '').' />No
-	
-	</td>
-	</tr>
-	<tr class="row_white">
-	<td colspan="2" ><span class="subhead">Enter the text that you wish to be displayed above the Social Counter Interface. Leave the field blank if you dont want any text to be displayed</span>
-	<br/><input type="text" name="social_counter_pretext" value="'.(Tools::getValue('social_counter_pretext', Configuration::get('social_counter_pretext')) ? $social_counter_pretext : '').'" />
-	</td>
-	</tr>
-	<tr>
-	<td colspan="2" ><span class="subhead">What Social Counter widget theme do you want to use across your website?</span><br /><br />';
-	
-	$choosecounter =Configuration::get('choosecounter');
-	if($choosecounter == '' || $choosecounter == '0' || $choosecounter == '1'){
-	  $style_visible= 'style="position:absolute;border-bottom:8px solid #ffffff; border-right:8px solid transparent; border-left:8px solid transparent; margin:-18px 0 0 2px"';} 
-	else{$style_visible='style="position:absolute;border-bottom:8px solid #ffffff;border-right:8px solid transparent; border-left:8px solid transparent; margin:-18px 0 0 70px;"';}
-	$html.='<a class="mymodal" href="javascript:void(0);" onclick="Makechorivisible();" id = "Makechorivisible"><b>Horizontal</b></a> &nbsp;|&nbsp; 
-	<a class="mymodal" href="javascript:void(0);" onclick="Makecvertivisible();"><b>Vertical</b></a>
-	<div style="border:#dddddd 1px solid; padding:10px; background:#FFFFFF; margin:10px 0 0 0;">
-	<span id = "carrow" '.$style_visible.'></span>';
-	$choosecounter =Configuration::get('choosecounter');
-	if($choosecounter='' || $choosecounter== '0' || $choosecounter== '1'){$show_block='style=display:block';}
-	else {$show_block='style=display:none';}
-	$html.='<div id="counterhorizontal" '.$show_block.'>
-	<input name="choosecounter" id ="chori16" '.$chori16.' type="radio" value="0" style="margin: 2px 10px 0 0; display: block; float: left !important;" /> <img src = "../modules/sociallogin/img/hybrid-horizontal.png" /><br /><br />
-	<input name="choosecounter" id = "chori32" '.$chori32.' type="radio" value="1" style="margin: 2px 10px 0 0; display: block; float: left !important;" /> <img src ="../modules/sociallogin/img/hybrid-horizontal-vertical.png" />
-	</div>';
-	$choosecounter =Configuration::get('choosecounter');
-	if($choosecounter== '2' || $choosecounter== '3'){$show_blockvertical='style=display:block';} 
-	else {$show_blockvertical='style=display:none';}
-	$html.='<div id="countervertical" '.$show_blockvertical.'>
-	<input name="choosecounter" id = "cvertibox32" '.$cvertibox32.' type="radio"  value="2" style="vertical-align:top"/> <img src = "../modules/sociallogin/img/hybrid-verticle-horizontal.png" style="vertical-align:top"/>
-	<input name="choosecounter" id = "cvertibox16" '.$cvertibox16.' type="radio" value="3" style="vertical-align:top"/> <img src = "../modules/sociallogin/img/hybrid-verticle-vertical.png" />
-	<div style="overflow:auto; background:#EBEBEB; padding:10px;">
-	<p style="margin:0 0 6px 0; padding:0px;color:#000000;"><strong>Select the position of Social Counter widget</strong></p>';
-	$ctopleft = "";
-	$ctopright = "";
-	$cbottomleft = "";
-	$cbottomright = "";
-	$choosecounterpos = (isset($choosecounterpos) ? $choosecounterpos : "0");
-	$verticalcountertopoffset=(isset($verticalcountertopoffset) ? $verticalcountertopoffset : "");
-	if ($choosecounterpos == '0' ) $ctopleft = "checked=checked";
-	else if ($choosecounterpos == '1' ) $ctopright = "checked=checked";
-	else if ($choosecounterpos == '2' ) $cbottomleft = "checked=checked";
-	else if ($choosecounterpos == '3' ) $cbottomright = "checked=checked";
-	else $ctopleft = "checked=checked";
-	$html.='<input name="choosecounterpos" id = "topleft" type="radio" '.$ctopleft.' value="0" /> Top Left<br /> 
-	<input name="choosecounterpos" id = "topright" type="radio" '.$ctopright.' value="1" /> Top Right<br />
-	<input name="choosecounterpos" id = "bottomleft" type="radio" '.$cbottomleft.' value="2" /> Bottom Left<br /> 
-	<input name="choosecounterpos" id = "bottomright" type="radio" '.$cbottomright.' value="3" /> Bottom Right <br /><br />
-	<p style="margin:0 0 6px 0; padding:0px;color:#000000;"><strong><strong>Specify distance of vertical counter interface from top. (Leave empty for default behaviour)</strong><a title="Enter a number (For example - 200). It will set the \'top\' CSS attribute of the interface to the value specified. Increase in the number pushes interface towards bottom." href="javascript:void(0)" style="text-decoration:none"> (<span style="color:#3CF;">?</span>)</a></strong></p>
-	<input type="text" id="topoffset" name="verticalcountertopoffset" value="'.$verticalcountertopoffset.'" >
-	</div>
-	</div></div>
-	</td>
-	</tr>
-	<tr>
-	<td colspan="2" ><span class="subhead">What Counter Networks do you want to show in the counter widget?</span><br /><br />
-	</td>
-	</tr>	
-	<tr >
-	<td>
-	<table class="form-table sociallogin_table" id="shareprovider">
-	<tr class="row_white">
-	<td>
-	<input type="checkbox" name="countericons[]" value="'.$this->l('Facebook Like').'" '.$enablefblike.' /> Facebook Like<br />
-	<input type="checkbox" name="countericons[]" value="'.$this->l('Facebook Recommend').'" '.$enablefbrecommend.' /> Facebook Recommend<br />
-	<input type="checkbox" name="countericons[]" value="'.$this->l('Facebook Send').'" '.$enablefbsend.' /> Facebook Send<br />
-	<input type="checkbox" name="countericons[]" value="'.$this->l('Google+ +1').'" '.$enablegplusone.' /> Google+ +1<br />
-	<input type="checkbox" name="countericons[]" value="'.$this->l('Google+ Share').'" '.$enablegshare.' /> Google+ Share<br />
-	<input type="checkbox" name="countericons[]" value="'.$this->l('Pinterest Pin it').'" '.$enablepinterestshare.' /> Pinterest Pin it<br />
-	</td>
-	<td>
-	<input type="checkbox" name="countericons[]" value="'.$this->l('LinkedIn Share').'" '.$enablelinkedinshare.' /> LinkedIn Share<br />
-	<input type="checkbox" name="countericons[]" value="'.$this->l('Twitter Tweet').'" '.$enabletweet.'  /> Twitter Tweet<br />
-	<input type="checkbox" name="countericons[]" value="'.$this->l('StumbleUpon Badge').'" '.$enablestbadge.' /> StumbleUpon Badge<br />
-	<input type="checkbox" name="countericons[]" value="'.$this->l('Reddit').'" '.$enableredditshare.'  /> Reddit<br/>
-	<input type="checkbox" name="countericons[]" value="'.$this->l('Hybridshare').'" '.$enablehybridshare.'  /> Hybridshare<br/>
-	</td>
-	</tr>
-	</table>
-	</td>
-	<tr>
-	<td>
-	<span class="subhead">'.$this->l('Social Counter Location').'</span>
-	<table class="form-table sociallogin_table">
-	<tr class="row_white">
-	<td>';
-	if(Tools::getValue('social_counter_home')==0 && Tools::getValue('social_counter_cart')==0 && Tools::getValue('social_counter_product')==0) {
-	Configuration::updateValue('social_counter_home', 1);
-	}
-	$html.='<input type="checkbox" name="social_counter_home" value="1" '.(Tools::getValue('social_counter_home', Configuration::get('social_counter_home')) ? 'checked="checked"' : '').' />Show on Home page<br/>
-	<input type="checkbox" name="social_counter_cart" value="1" '.(Tools::getValue('social_counter_cart', Configuration::get('social_counter_cart')) ? 'checked="checked"' : '').' />Show on Cart page<br/>
-	<input type="checkbox" name="social_counter_product" value="1" '.(Tools::getValue('social_counter_product', Configuration::get('social_counter_product')) ? 'checked="checked"' : '').' />Show on Product Page<br/>
-	</td>
-	</tr>
-	</table>
-	</td>
-	</tr>
-	</tr>
-	</table>
-	</div></dd>
-	<input class="button" type="submit" name="submitKeys" value="'.$this->l('   Save Configuration ').'" style="cursor:pointer;"/>	
+	<input class="button" type="submit" name="submitKeys" value="'.$this->l('Save Configuration').'" style="cursor:pointer;"/>	
 	</div>
 	</form>
 	</div>
 	<div style="float:right; width:29%;">
 	<!-- Help Box --> 
-	<div style="background:#EAF7FF; border: 1px solid #B3E2FF; overflow:auto; margin:0 0 10px 0;">
-	<h3 style="border-bottom:#000000 1px solid; margin:0px; padding:0 0 6px 0; border-bottom: 1px solid #B3E2FF; color: #000000; margin:10px;">Help & Documentations</h3>
+	<div style="background: none repeat scroll 0 0 rgb(231, 255, 224);border: 1px solid rgb(191, 231, 176); overflow:auto; margin:0 0 10px 0;">
+	<h3 style="border-bottom:#000000 1px solid; margin:0px; padding:0 0 6px 0; border-bottom: 1px solid #B3E2FF; color: #000000; margin:10px;">'.$this->l('Help & Documentations').'</h3>
 	<ul class="help_ul">
-	<li><a href="http://support.loginradius.com/customer/portal/articles/1107175-implementation-of-social-login-on-prestashop-v1-5-website" target="_blank">Plugin Installation, Configuration and Troubleshooting</a></li>
-	<li><a href="http://support.loginradius.com/customer/portal/articles/677100-how-to-get-loginradius-api-key-and-secret" target="_blank">How to get LoginRadius API Key & Secret</a></li>
-	<li><a href="http://support.loginradius.com/customer/portal/articles/594031" target="_blank">Support Documentations</a></li>
-	<li><a href="http://community.loginradius.com/" target="_blank">Discussion Forum</a></li>
-	<li><a href="https://www.loginradius.com/Loginradius/About" target="_blank">About LoginRadius</a></li>
-	<li><a href="https://www.loginradius.com/product/product-overview" target="_blank">LoginRadius Products</a></li>
-	<li><a href="https://www.loginradius.com/addons" target="_blank">Other LoginRadius Addons</a></li>
-	<li><a href="https://www.loginradius.com/addons" target="_blank">Social Plugins</a></li>
-	<li><a href="https://www.loginradius.com/sdks/loginradiussdk" target="_blank">Social SDKs</a></li>
-	<li><a href="https://www.loginradius.com/loginradius/Testimonials" target="_blank">Testimonials</a></li>
+	<li><a href="http://support.loginradius.com/customer/portal/articles/1107175-implementation-of-social-login-on-prestashop-v1-5-website" target="_blank">'.$this->l('Plugin Installation, Configuration and Troubleshooting').'</a></li>
+	<li><a href="http://support.loginradius.com/customer/portal/articles/677100-how-to-get-loginradius-api-key-and-secret" target="_blank">'.$this->l('How to get LoginRadius API Key & Secret').'</a></li>
+	<li><a href="http://support.loginradius.com/customer/portal/articles/594031" target="_blank">'.$this->l('Support Documentations').'</a></li>
+	<li><a href="http://community.loginradius.com/" target="_blank">'.$this->l('Discussion Forum').'</a></li>
+	<li><a href="https://www.loginradius.com/Loginradius/About" target="_blank">'.$this->l('About LoginRadius').'</a></li>
+	<li><a href="https://www.loginradius.com/product/product-overview" target="_blank">'.$this->l('LoginRadius Products').'</a></li>
+	<li><a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms" target="_blank">'.$this->l('Social Plugins').'</a></li>
+	<li><a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-sdks" target="_blank">'.$this->l('Social SDKs').'</a></li>
+	<li><a href="https://www.loginradius.com/loginradius/Testimonials" target="_blank">'.$this->l('Testimonials').'</a></li>
 	</ul>
 	</div>
 	<div style="clear:both;"></div>
 	<div style="background:#EAF7FF; border: 1px solid #B3E2FF;  margin:0 0 10px 0; overflow:auto;">
 	<h3 style="border-bottom:#000000 1px solid; margin:0px; padding:0 0 6px 0; border-bottom: 1px solid #B3E2FF; color: #000000; margin:10px;">Stay Update!</h3>
 	<p align="justify" style="line-height: 19px;font-size:12px !important;margin:10px !important;color: #000000;">
-	To receive updates on new features, releases, etc, please connect to one of our social media pages.</p>
+	'.$this->l('To receive updates on new features, releases, etc, please connect to one of our social media pages.').'</p>
 	<ul class="stay_ul">
 	<li class="first">
 	<iframe rel="tooltip" scrolling="no" frameborder="0" allowtransparency="true" style="border: none; overflow: hidden; width: 46px;
 	height: 63px;" src="//www.facebook.com/plugins/like.php?app_id=194112853990900&amp;href=http%3A%2F%2Fwww.facebook.com%2Fpages%2FLoginRadius%2F119745918110130&amp;send=false&amp;layout=box_count&amp;width=90&amp;show_faces=false&amp;action=like&amp;colorscheme=light&amp;font=arial&amp;height=9" data-original-title="Like us on Facebook"></iframe>
 	</li>
 	</ul>
-	<div>
-	<div class="twitter_box"><span id="followers"></span></div>
-	<a href="https://twitter.com/LoginRadius" class="twitter-follow-button" data-show-count="false" data-show-screen-name="false"></a>
-	<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
-	</div>
 	</div>
 	<div style="clear:both;"></div>
 	<!-- Upgrade Box -->
 	<div style="background:#EAF7FF; border: 1px solid #B3E2FF; overflow:auto; margin:0 0 10px 0;">
 	<h3 style="border-bottom:#000000 1px solid; margin:0px; padding:0 0 6px 0; border-bottom: 1px solid #B3E2FF; color: #000000; margin:10px;">Support Us</h3>
 	<p align="justify" style="line-height: 19px; font-size:12px !important; margin:10px !important;color: #000000;">
-	If you liked our FREE open-source plugin, please send your feedback/testimonial to <a style="color:#0000ff;" href="mailto:feedback@loginradius.com">feedback@loginradius.com</a>!</p>
+	'.$this->l('If you liked our FREE open-source plugin, please send your feedback/testimonial to').' <a style="color:#0088CC;" href="mailto:feedback@loginradius.com">feedback@loginradius.com</a>!</p>
 	</div>
 	</div>
 	</div>';
@@ -1211,8 +866,6 @@ SQLQUERY;
 	
 	global $cookie;
 	$li='';
-	$API_KEY = trim(Configuration::get('API_KEY'));
-	$API_SECRET = trim(Configuration::get('API_SECRET'));
 	if(isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']!='Off' && !empty($_SERVER['HTTPS'])){$http='https://';}
 	else{$http='http://';}
 	$loc=(isset($_SERVER['REQUEST_URI']) ? urlencode($http.$_SERVER["HTTP_HOST"].$_SERVER['REQUEST_URI']): urlencode($http.$_SERVER["HTTP_HOST"].$_SERVER['PHP_SELF'].'?'.$_SERVER['QUERY_STRING']));
@@ -1222,14 +875,12 @@ SQLQUERY;
 	    $loc=urlencode($http.$_SERVER["HTTP_HOST"].$_SERVER['PHP_SELF']);
 	  }
 	}
-	
 	$getdata = Db::getInstance()->ExecuteS('SELECT * FROM '.pSQL(_DB_PREFIX_.'customer').' as c WHERE c.email='." '$cookie->email' ".' LIMIT 0,1');
 	$num=(!empty($getdata['0']['id_customer'])? $getdata['0']['id_customer']:"");
 	$linkedprovider=Db::getInstance()->ExecuteS("SELECT * from ".pSQL(_DB_PREFIX_.'sociallogin')." where `id_customer`='".$num."'");
-	$script= '<script src="//hub.loginradius.com/include/js/LoginRadius.js"></script><script type="text/javascript"> var options={}; options.login=true; LoginRadius_SocialLogin.util.ready(function () { $ui = LoginRadius_SocialLogin.lr_login_settings;$ui.interfacesize = "";$ui.apikey ="'.$API_KEY.'";$ui.callback="'.$loc.'"; $ui.lrinterfacecontainer ="interfacecontainerdiv"; LoginRadius_SocialLogin.init(options); });</script><div id="interfacecontainerdiv" class="interfacecontainerdiv"> </div><ul style="list-style:none">';
+	$loginradius_interface= '<div id="interfacecontainerdiv" class="interfacecontainerdiv"> </div><ul style="list-style:none">';
 	for($i=0; $i<count($linkedprovider); $i++){
-	  $message= '<label> Connected with </label>';?>
-	  
+	  $message= '<label> Connected with </label>';?>  
 	  <?php
 	  if(empty($cookie->lr_login)) {
 	    $cookie->loginradius_id='';
@@ -1238,9 +889,8 @@ SQLQUERY;
 	  $message= '<label style="color:green;"> Currently connected with </label>';
 	  }
 	  $li.="<li style='width:320px;float:left;margin:2px;'><img src='".__PS_BASE_URI__."modules/sociallogin/img/".$linkedprovider[$i]['Provider_name'].".png'>".$message.$linkedprovider[$i]['Provider_name']." <a href='sociallinking.php?id_provider=".$linkedprovider[$i]['provider_id']."'><input name='submit' type='button' value='remove' style='background:#666666; color:#FFF; text-decoration:none;cursor: pointer; float:right;'></a></li>";
-	  //<input type='hidden' name='id_provider' value=".$linkedprovider[$i]['provider_id']."><input type='submit' name='submit' value='Remove' style='background:#666666; color:#FFF; text-decoration:none;cursor: pointer; float:right;'></li>";
 	  }
-	return $script.$li.'</ul>';
+	return $loginradius_interface.$li.'</ul>';
   
 }
     /*

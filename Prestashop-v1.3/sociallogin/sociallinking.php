@@ -5,7 +5,7 @@ $useSSL = true;
 include(dirname(__FILE__).'/../../config/config.inc.php');
 include(dirname(__FILE__).'/../../header.php');
 include_once(dirname(__FILE__).'/sociallogin.php');
-include_once(dirname(__FILE__).'/sociallogin_user_data.php');
+include_once(dirname(__FILE__).'/sociallogin_functions.php');
 
 global $smarty;
 //$socialloginlrmessage = array();
