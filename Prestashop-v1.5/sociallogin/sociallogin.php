@@ -3,313 +3,360 @@ if ( !defined( '_PS_VERSION_' ) ){
 exit;
 }
 class sociallogin extends Module{
-  public function __construct(){
-	$this->name = "sociallogin";
-	$this->version = "2.5";
-	$this->author = "LoginRadius";
-	$this->need_instance = 1;
-	$this->module_key="3afa66f922e9df102449d92b308b4532";//don't change given by sir
-	parent::__construct();
-	$this->displayName = $this->l("Social Login");
-	$this->description = $this->l("Let your users log in and comment via their accounts with popular ID providers such as Facebook, Google, Twitter, Yahoo, Vkontakte and over 25 more!.");
+    /**
+	 * Constructor
+	 **/
+	public function __construct(){
+		$this->name = "sociallogin";
+		$this->version = "2.7";
+		$this->author = "LoginRadius";
+		$this->need_instance = 1;
+		$this->module_key="3afa66f922e9df102449d92b308b4532";//Product Key //Dont change.
+		parent::__construct();
+		$this->displayName = $this->l("Social Login");
+		$this->description = $this->l("Let your users log in and comment via their accounts with popular ID providers such as Facebook, Google, Twitter, Yahoo, Vkontakte and over 25 more!.");
 	}
-	
-  /*
-  *  Left column hook that show social login interface left side.
-  */
-  public function hookLeftColumn( $params,$str="" ){
-	global $smarty ,$cookie;
-	if (Context:: getContext()->customer->isLogged()){
-	  return;
-	}
-	$loginradius_api_key = trim(Configuration::get('API_KEY'));
-	$loginradius_api_secret = trim(Configuration::get('API_SECRET'));
-	if(Configuration::get('enable_social_login')=='0') {
-	if (!preg_match('/^\{?[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}\}?$/i', $loginradius_api_secret) || !preg_match('/^\{?[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}\}?$/i', $loginradius_api_key)) {
-			$iframe =  "<p style='color:red'>".$this->l('Your LoginRadius API Key or secret is not valid, please correct it or contact 
-		LoginRadius support at')."<br/><a href='http://www.LoginRadius.com' target='_blank'>www.loginradius.com</a></p>";
-	  if($str=="right" ||$str==""){ $right=true;} 
-	  else { $right=false; }
-	  $smarty->assign('right',$right);	
-	  $smarty->assign( 'iframe', $iframe );
-	  $smarty->assign( 'margin_style', '' );   
-	  return $this->display( __FILE__, 'loginradius.tpl' );
-	}
-	elseif(!empty($loginradius_api_key) && !empty($loginradius_api_secret) ){
-		$cookie->lr_login=false;
-		$margin_style="";
-		if($str=="margin"){
-		  $margin_style='style="margin-left:8px;margin-top:5px;"';
+	/*
+	*  Left column hook that show social login interface left side.
+	*/
+	public function hookLeftColumn( $params,$str="" ){
+		global $smarty ,$cookie;
+		if (Context:: getContext()->customer->isLogged()){
+		  return;
 		}
-		$Title=Configuration::get('TITLE');
-		$iframe=$Title.'<br/><div id="interfacecontainerdiv" class="interfacecontainerdiv"></div>';	
-		if($str=="right" ||$str==""){
-		  $right=true;
-		} else {
-		  $right=false;
-		  $jsfiles='<script>$(function(){loginradius_interface();});</script>';
-		  $iframe=$Title.'<br/>'.$jsfiles.'<div id="interfacecontainerdiv" class="interfacecontainerdiv"></div>';	
-		}
-		$smarty->assign('right',$right);		
-		$smarty->assign( 'margin_style', $margin_style );     
-		$smarty->assign( 'iframe', $iframe );
-		return $this->display( __FILE__, 'loginradius.tpl' );
-		}
-	}
-  }
-  
-  /*
-  *  Right column hook that show social login interface right side.
-  */
-  public function hookRightColumn( $params ){
-	return $this->hookLeftColumn( $params,"right" );
-  }
-  
-  /*
-  *  Account top hook that show social login interface at create an account (register ) .
-  */
-  public function hookCreateAccountTop( $params ){
-	return $this->hookLeftColumn( $params,"margin" );
-  }
-  /*
-  *  Header hook that add script [Social share script, Social counter script, Social Interface script] at head .
-  */
-  public function  hookHeader( $params) {
-	include_once(dirname(__FILE__)."/sociallogin_functions.php");
-	$script = '';
-	if(Configuration::get('enable_social_login')=='0') {
 		$loginradius_api_key = trim(Configuration::get('API_KEY'));
 		$loginradius_api_secret = trim(Configuration::get('API_SECRET'));
-		if(!empty($loginradius_api_key) && !empty($loginradius_api_secret) ){
-			$script .= loginradius_interface_script();
+		if(Configuration::get('enable_social_login')=='0') {
+		if (!preg_match('/^\{?[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}\}?$/i', $loginradius_api_secret) || !preg_match('/^\{?[A-Z0-9]{8}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{12}\}?$/i', $loginradius_api_key)) {
+				$iframe =  "<p style='color:red'>".$this->l('Your LoginRadius API Key or secret is not valid, please correct it or contact 
+			LoginRadius support at')."<br/><a href='http://www.LoginRadius.com' target='_blank'>www.loginradius.com</a></p>";
+		  if($str=="right" ||$str==""){ $right=true;} 
+		  else { $right=false; }
+		  $smarty->assign('right',$right);	
+		  $smarty->assign( 'iframe', $iframe );
+		  $smarty->assign( 'margin_style', '' );   
+		  return $this->display( __FILE__, 'loginradius.tpl' );
+		}
+		elseif(!empty($loginradius_api_key) && !empty($loginradius_api_secret) ){
+			$cookie->lr_login=false;
+			$margin_style="";
+			if($str=="margin"){
+			  $margin_style='style="margin-left:8px;margin-top:5px;"';
+			}
+			$Title=Configuration::get('TITLE');
+			$iframe=$Title.'<br/>'.'<div id="interfacecontainerdiv" class="interfacecontainerdiv"></div>';	
+			if($str=="right" ||$str==""){
+			  $right=true;
+			} else {
+			  $right=false;
+			  $jsfiles='<script>$(function(){loginradius_interface();});</script>';
+			  $iframe=$Title.'<br/>'.$jsfiles.'<div id="interfacecontainerdiv" class="interfacecontainerdiv"></div>';	
+			}
+			$smarty->assign('right',$right);		
+			$smarty->assign( 'margin_style', $margin_style );     
+			$smarty->assign( 'iframe', $iframe );
+			return $this->display( __FILE__, 'loginradius.tpl' );
+			}
 		}
 	}
-	if( Configuration::get('enable_social_sharing')=='0') {
-		if( Configuration::get('enable_social_horizontal_sharing')=='0') {
-			$script .= loginradius_horizontal_share_script();
-		}
-		if( Configuration::get('enable_social_vertical_sharing')=='0') {
-			$script .= loginradius_vertical_share_script();
-		}
+	/*
+	*  Right column hook that show social login interface right side.
+	*/
+	public function hookRightColumn( $params ){
+		return $this->hookLeftColumn( $params,"right" );
 	}
-    return $script;
-  }
-  
-  public function all_messages($value){
-	return $this->l($value);
+	/*
+	*  Account top hook that show social login interface at create an account (register ) .
+	*/
+	public function hookCreateAccountTop( $params ){
+		return $this->hookLeftColumn( $params,"margin" );
+	}
+	/*
+	*  Header hook that add script [Social share script, Social counter script, Social Interface script] at head .
+	*/
+	public function  hookHeader( $params) {
+		include_once(dirname(__FILE__)."/sociallogin_functions.php");
+		$script = '';
+		if(Configuration::get('enable_social_login')=='0') {
+			$loginradius_api_key = trim(Configuration::get('API_KEY'));
+			$loginradius_api_secret = trim(Configuration::get('API_SECRET'));
+			if(!empty($loginradius_api_key) && !empty($loginradius_api_secret) ){
+				$script .= loginradius_interface_script();
+			}
+		}
+		if( Configuration::get('enable_social_sharing')=='0') {
+			if( Configuration::get('enable_social_horizontal_sharing')=='0') {
+				$script .= loginradius_horizontal_share_script();
+			}
+			if( Configuration::get('enable_social_vertical_sharing')=='0') {
+				$script .= loginradius_vertical_share_script();
+			}
+		}
+		return $script;
+	}
+	//Show all message according to Language.
+	public function all_messages($value){
+		return $this->l($value);
 	}
 	public function all_messagess(){
-	$msg ='';
-	$msg .= $this->l('Account cannot be mapped as it already exists in database');
-	$msg .= $this->l('Your account is successfully mapped');
-	$msg .= $this->l('Authentication failed.');
-	$msg .= $this->l('User has been disbled or blocked.');
-	$msg .= $this->l('Your Confirmation link Has Been Sent To Your Email Address. Please verify your email by clicking on confirmation link.');
-	$msg .= $this->l('Email is verified. Now you can login using Social Login.');
-	$msg .= $this->l('Verify your email id.');
-	$msg .= $this->l('Please click on the following link or paste it in browser to verify your email: click');
-	$msg .= $this->l('Please fill the following details to complete the registration');
-	$msg .= $this->l('Thank You For Registration');
-	$msg .= $this->l('New User Registration');
-	$msg .= $this->l('New User Registered to your site');
-	$msg .= $this->l('Resend Email Verification');
-	$msg .= $this->l('Country');
-	$msg .= $this->l('Email');
-	$msg .= $this->l('City');
-	$msg .= $this->l('ZIP code');
-	$msg .= $this->l('Address Title');	
-	$msg .= $this->l('Ok');	
-	$msg .= $this->l('Email will work at online only.');
-	$msg .= $this->l('This email id already exist');	
+		$msg ='';
+		$msg .= $this->l('This social ID is already linked with an account. Kindly unmap the current ID before linking new Social ID.');
+		$msg .= $this->l('Account cannot be mapped as it already exists in database');
+		$msg .= $this->l('Your account is successfully mapped');
+		$msg .= $this->l('Authentication failed.');
+		$msg .= $this->l('User has been disbled or blocked.');
+		$msg .= $this->l('Your confirmation link has been sent to your email address. Please verify your email by clicking on confirmation link.');
+		$msg .= $this->l('Email is verified. Now you can login using Social Login.');
+		$msg .= $this->l('Verify your email id.');
+		$msg .= $this->l('Please click on the following link or paste it in browser to verify your email: click');
+		$msg .= $this->l('Please fill the following details to complete the registration');
+		$msg .= $this->l('Thank You For Registration');
+		$msg .= $this->l('New User Registration');
+		$msg .= $this->l('New User Registered to your site');
+		$msg .= $this->l('Resend Email Verification');
+		$msg .= $this->l('Country');
+		$msg .= $this->l('Email');
+		$msg .= $this->l('City');
+		$msg .= $this->l('ZIP code');
+		$msg .= $this->l('Address Title');	
+		$msg .= $this->l('Ok');	
+		$msg .= $this->l('Email will work at online only.');
+		$msg .= $this->l('This email id already exist');	
 	}
-  /*
-  *  home hook that showing share and counter widget at home page. 
-  */
-  public function hookHome($params) {
-	global $smarty;
-	if( Configuration::get('enable_social_sharing')=='0') {
-	if( Configuration::get ('social_share_home')=='1' || Configuration::get ('social_share_product')=='1' || Configuration::get ('social_share_cart')=='1') {
-	if( Configuration::get('enable_social_horizontal_sharing')=='0') {
-	    $sharingpretext = trim(Configuration::get('social_share_pretext'));
-	    $horizontal_sharing='<b>'.$sharingpretext.'</b><br/><div class="lrsharecontainer"></div><div class="lrcounter_simplebox"></div>';
-	    $smarty->assign( 'horizontal_sharing', $horizontal_sharing ); 
+	/*
+	*  home hook that showing share and counter widget at home page. 
+	*/
+	public function hookHome($params) {
+		global $smarty;
+		if( Configuration::get('enable_social_sharing')=='0') {
+			if( Configuration::get ('social_share_home')=='1' || Configuration::get ('social_share_product')=='1' || Configuration::get ('social_share_cart')=='1') {
+				if( Configuration::get('enable_social_horizontal_sharing')=='0') {
+					$sharingpretext = trim(Configuration::get('social_share_pretext'));
+					$horizontal_sharing='<b>'.$sharingpretext.'</b><br/>';
+					if(Configuration::get('chooseshare') != 8 && Configuration::get('chooseshare') != 9) {
+						$horizontal_sharing .= '<div class="lrsharecontainer"></div>';
+					}
+					else {
+						$horizontal_sharing .= '<div class="lrcounter_simplebox"></div>';
+					}
+					$smarty->assign( 'horizontal_sharing', $horizontal_sharing ); 
+					}
+					if( Configuration::get('enable_social_vertical_sharing')=='0') {
+						if(Configuration::get('chooseverticalshare') != 6 &&  Configuration::get('chooseverticalshare') != 7) {
+							$vertical_sharing= '<div class="lrshareverticalcontainer"></div>';
+						}
+						else {
+							$vertical_sharing ='<div class="lrcounter_verticalsimplebox"></div>';
+						}
+						$smarty->assign( 'vertical_sharing', $vertical_sharing ); 
+					}
+				  }
+			 }
+		if(Configuration::get('enable_social_sharing')=='0') {
+		  return $this->display( __FILE__, 'sharing.tpl' );
 		}
-		if( Configuration::get('enable_social_vertical_sharing')=='0') {
-	    $vertical_sharing= '<div class="lrshareverticalcontainer"></div><div class="lrcounter_verticalsimplebox"></div>';
-	    $smarty->assign( 'vertical_sharing', $vertical_sharing ); 
-		}
-	  }
-	  }
-	if(Configuration::get('enable_social_sharing')=='0') {
-	  return $this->display( __FILE__, 'sharing.tpl' );
 	}
-  }
-  
-  /*
-  *  Invoice hook that showing share and counter widget at Invoice page. 
-  */
-  public function hookInvoice($params){
-  return $this->hookHome($params); 
-  }
-  
-  /*
-  *  Cart hook that showing share and counter widget at Cart page. 
-  */
-  public function hookShoppingCart($params){
-  	if(Configuration::get ('social_share_cart')=='1')
-  		return $this->hookHome($params); 
-  }
-	 /*
-  *  Product footer hook that showing share and counter widget at product footer page. 
-  */
-  public function hookProductFooter($params) {
-	global $cookie, $link, $smarty;
-	/* Product informations */
-	$product = new Product((int)Tools::getValue('id_product'), false, (int)$cookie->id_lang);
-	$this->currentproduct = $product;
-	$productLink = $link->getProductLink($product);
-	$language = strtolower(Language::getIsoById($cookie->id_lang));
-	if(Configuration::get ('social_share_product')=='1')
+	/*
+	*  Invoice hook that showing share and counter widget at Invoice page. 
+	*/
+	public function hookInvoice($params){
 		return $this->hookHome($params); 
-  }
-  
-   /*
+	}
+	/*
+	*  Cart hook that showing share and counter widget at Cart page. 
+	*/
+	public function hookShoppingCart($params){
+		if(Configuration::get ('social_share_cart')=='1')
+			return $this->hookHome($params); 
+	}
+	 /*
+	*  Product footer hook that showing share and counter widget at product footer page. 
+	*/
+	public function hookProductFooter($params) {
+		global $cookie, $link, $smarty;
+		/* Product informations */
+		$product = new Product((int)Tools::getValue('id_product'), false, (int)$cookie->id_lang);
+		$this->currentproduct = $product;
+		$productLink = $link->getProductLink($product);
+		$language = strtolower(Language::getIsoById($cookie->id_lang));
+		if(Configuration::get ('social_share_product')=='1')
+			return $this->hookHome($params); 
+	}
+  /*
   *  Top hook that Handle login functionality.
   */
-  public function hookTop(){
-	global $cookie;
-	$module= new sociallogin();
-	include_once(dirname(__FILE__)."/sociallogin_functions.php");
-	if (Context:: getContext()->customer->isLogged()){
-	  include_once("LoginRadiusSDK.php");
-	  $loginradius_secret = trim(Configuration::get('API_SECRET'));
-	  $lr_obj=new LoginRadius();
-	  $userprofile=$lr_obj->loginradius_get_data($loginradius_secret);
-	  if(isset($_REQUEST['token']) && !empty($userprofile)){
-	   // include_once("sociallogin_user_data.php");
-	    LrUser::linking($cookie,$userprofile);
-	  }
-	  if(isset($_REQUEST['id_provider'])) {
-	    $getdata = Db::getInstance()->ExecuteS('SELECT * FROM '.pSQL(_DB_PREFIX_.'customer').' as c WHERE c.email='." '$cookie->email' ".' LIMIT 0,1');
-	    $num=(!empty($getdata['0']['id_customer'])? $getdata['0']['id_customer']:"");
-	    $deletequery="delete from ".pSQL(_DB_PREFIX_.'sociallogin')." where provider_id ='".$_REQUEST['id_provider']."'";
-	    Db::getInstance()->Execute($deletequery);
-		$cookie->lrmessage = $module->l('Your Social identity has been removed successfully');
-	    Tools::redirect($_SERVER['HTTP_REFERER']);
-	  }
+	public function hookTop(){
+		global $cookie;
+		$module= new sociallogin();
+		include_once("sociallogin_functions.php");
+		//check user is already logged in.
+		if (Context:: getContext()->customer->isLogged()){
+		  include_once("LoginRadiusSDK.php");
+		  $loginradius_secret = trim(Configuration::get('API_SECRET'));
+		  $lr_obj=new LoginRadius();
+		  //Get the user profile data.
+		  $userprofile=$lr_obj->loginradius_get_data($loginradius_secret);
+		  //Provide account linking when uer is laready logged in.
+		  if(isset($_REQUEST['token']) && !empty($userprofile)){
+			linking($cookie,$userprofile);
+		  }
+		  //Remove account linking when user click on remove button.
+		  if(isset($_REQUEST['id_provider'])) {
+			$getdata = Db::getInstance()->ExecuteS('SELECT * FROM '.pSQL(_DB_PREFIX_.'customer').' as c WHERE c.email='." '$cookie->email' ".' LIMIT 0,1');
+			$num=(!empty($getdata['0']['id_customer'])? $getdata['0']['id_customer']:"");
+			$deletequery="delete from ".pSQL(_DB_PREFIX_.'sociallogin')." where provider_id ='".$_REQUEST['id_provider']."'";
+			Db::getInstance()->Execute($deletequery);
+			$cookie->lrmessage = $module->l('Your Social identity has been removed successfully');
+			Tools::redirect($_SERVER['HTTP_REFERER']);
+		  }
+		}
+		//user is not logged in.
+		//Retrieve token and provde login functionality.
+		if(isset($_REQUEST['token'])){
+		  loginradius_connect();
+		}
+		//Get verification link to verify email.
+		elseif(isset($_REQUEST['SL_VERIFY_EMAIL'])){
+		  verifyEmail();
+		}
+		//Resend email verfication if user would not get verification email.
+		elseif (isset($_REQUEST['resend_email_verification'])) {
+		 login_radius_resend_email_verification($_POST['social_id_value']);
+		 return;
+		}
+		//When Email popup is submitted by user.
+		elseif(isset($_REQUEST['hidden_val'])){
+		  global $cookie;  
+			if(isset($_POST['LoginRadius']) && $_POST['LoginRadius']=="Submit" && ($_REQUEST['hidden_val'] == $cookie->SL_hidden )){
+				if(isset($_POST['LoginRadius'])) {
+					global $cookie;
+					$data = unserialize($cookie->login_radius_data);
+					$profilefield=unserialize(Configuration::get('profilefield'));
+					if(empty($profilefield)) {
+					  $profilefield[] = '3';
+					}
+					$profilefield = implode(';', $profilefield);
+					  //GEt the form post value in array.
+					  if(isset($_POST['SL_EMAIL'])){ $data['email']=$_POST['SL_EMAIL'];}
+					  if(isset($_POST['SL_CITY'])){ $data['city']=$_POST['SL_CITY'];}
+					  if(isset($_POST['location-state'])){ $data['state']=$_POST['location-state'];}
+					  if(isset($_POST['SL_PHONE'])){ $data['phonenumber']=$_POST['SL_PHONE'];}
+					  if(isset($_POST['SL_ADDRESS'])){ $data['address']=$_POST['SL_ADDRESS'];}
+					  if(isset($_POST['SL_ZIP_CODE'])){ $data['zipcode']=$_POST['SL_ZIP_CODE'];}
+					  if(isset($_POST['SL_ADDRESS_ALIAS'])){ $data['addressalias']=$_POST['SL_ADDRESS_ALIAS'];}
+					  if(isset($_POST['location_country'])){ $data['country']=$_POST['location_country'];}
+					  if(isset($_POST['SL_FNAME'])){ $data['fname']=$_POST['SL_FNAME'];$data['firstname']=$data['fname'];}
+					  if(isset($_POST['SL_LNAME'])){ $data['lname']=$_POST['SL_LNAME'];$data['lastname']=$data['lname'];}
+				}
+				$ERROR_MESSAGE=Configuration::get('ERROR_MESSAGE');
+				if(Configuration::get('user_require_field')=="1") {
+				    //If form data is empty.
+					if((empty($data['city']) && strpos($profilefield,'4') !== false) || empty($data['state'])  || (empty($data['phonenumber'])&& strpos($profilefield,'5') !== false) || (empty($data['address'])&& strpos($profilefield,'6') !== false) || (empty($data['zipcode'])&& strpos($profilefield,'8') !== false)|| (empty($data['country'])&& strpos($profilefield,'3') !== false) || empty($data['email'])|| (empty($data['addressalias'])&& strpos($profilefield,'7') !== false)|| (empty($data['fname'])&& strpos($profilefield,'1') !== false) || (empty($data['lname'])&& strpos($profilefield,'2') !== false)) {
+						popUpWindow('<p style="color:red; padding:0px;">'.$ERROR_MESSAGE.'</p>',$data);
+						return;
+					}
+					//Check zipcode entered is according to country.
+					if(!empty($data['country']) && !empty($data['zipcode'])) {
+						//$check['email']= $data['email'];
+						$postcode=trim($data['zipcode']);
+						$zip_code = Db::getInstance()->executeS('SELECT * FROM '._DB_PREFIX_.'country c WHERE c.iso_code = "'.$data['country'].'"');
+						$zip_code_format=$zip_code['0']['zip_code_format'];
+						if(!empty($zip_code_format)) {
+							$zip_regexp = '/^'.$zip_code_format.'$/ui';
+							$zip_regexp = str_replace(' ', '( |)', $zip_regexp);
+							$zip_regexp = str_replace('-', '(-|)', $zip_regexp);
+							$zip_regexp = str_replace('N', '[0-9]', $zip_regexp);
+							$zip_regexp = str_replace('L', '[a-zA-Z]', $zip_regexp);
+							$zip_regexp = str_replace('C', $data['country'], $zip_regexp);
+							if (!preg_match($zip_regexp, $postcode)) {
+								//$data = unserialize($cookie->login_radius_data);
+								popUpWindow('<p style="color:red; padding:0px;margin-bottom: 3px;">'.$ERROR_MESSAGE.'</p><p 
+								style="color: red;margin-bottom: -20px; font-size: 10px;">'.$module->l('Your zip/postal code is incorrect.').'<br />'.$module->l('Must be typed as follows:').' '.str_replace('C', $data['country'], str_replace('N', '0', str_replace('L', 'A', $zip_code_format))).'</p>',$data);
+								return;
+							}
+						}
+					}
+				}
+				//Validate meail address is from email popup.
+				else if (!Validate::isEmail( $data['email'])){
+				popUpWindow('<p style="color:red; padding:0px;">'.$ERROR_MESSAGE.'</p>',$data);
+				  return;
+				}
+				//Update/Save the data and provide login to user.
+				SL_data_save($data);
+			}
+			//Saved data (cookie)is deleted.
+			else{
+		  $msgg=$module->l('Cookie has been deleted, please try again.');
+		  popup_verify($msgg);
+		  }
+		}
 	}
-	if(isset($_REQUEST['token'])){
-	 // include_once("sociallogin_user_data.php");
-	  $obj=new LrUser();
-	}elseif(isset($_REQUEST['SL_VERIFY_EMAIL'])){
-	  verifyEmail();
-	}elseif (isset($_REQUEST['resend_email_verification'])) {
-     login_radius_resend_email_verification($_POST['social_id_value']);
-	 return;
+	/*
+	*  customer account hook that show tpl for Social linking.
+	*/
+	public function hookDisplayCustomerAccount($params) {
+		$this->smarty->assign('in_footer', false);
+		return $this->display(__FILE__, 'my-account.tpl');
+	} 
+	/*
+	*  my account hook that show tpl for Social linking.
+	*/
+	public function hookMyAccountBlock($params) {
+		$this->smarty->assign('in_footer', true);
+		return $this->display(__FILE__, 'my-account.tpl');
 	}
-	elseif(isset($_REQUEST['hidden_val'])){
-	  global $cookie;  
-	if(isset($_POST['LoginRadius']) && $_POST['LoginRadius']=="Submit" && ($_REQUEST['hidden_val'] == $cookie->SL_hidden )){
-	  //$data=new stdClass;
-	if(isset($_POST['LoginRadius'])) {
-	global $cookie;
-	$data = unserialize($cookie->login_radius_data);
-	$profilefield=unserialize(Configuration::get('profilefield'));
-	if(empty($profilefield)) {
-	  $profilefield[] = '3';
+	/**
+	 * Moves a hook to the top position
+	 **/
+	protected function move_lr_hook_position ($hook_name, $position)
+	{
+		// Get the hook identifier.
+		if (($id_hook = Hook::getIdByName ($hook_name)) !== false) {
+			// Load the social login  module.
+			if (($module = Module::getInstanceByName ($this->name)) !== false) {
+				// Get the max position of hook .
+				$sql = "SELECT MAX(position) AS position FROM `" . _DB_PREFIX_ . "hook_module` WHERE `id_hook` = '" . intval ($id_hook) . "'";
+				$result = Db::getInstance ()->GetRow ($sql);
+				if (is_array ($result) AND isset ($result ['position'])) {
+					$way = (($result ['position'] >= $position) ? 0 : 1);
+					return $module->updatePosition ($id_hook, $way, $position);
+				}
+			}
+		}
+		//An error occurred.
+		return false;
 	}
-$profilefield = implode(';', $profilefield);
-	//$cookie->login_radius_data='';
-	  if(isset($_POST['SL_EMAIL'])){ $data['email']=$_POST['SL_EMAIL'];}
-	  if(isset($_POST['SL_CITY'])){ $data['city']=$_POST['SL_CITY'];}
-	  if(isset($_POST['location-state'])){ $data['state']=$_POST['location-state'];}
-	  if(isset($_POST['SL_PHONE'])){ $data['phonenumber']=$_POST['SL_PHONE'];}
-	  if(isset($_POST['SL_ADDRESS'])){ $data['address']=$_POST['SL_ADDRESS'];}
- 	  if(isset($_POST['SL_ZIP_CODE'])){ $data['zipcode']=$_POST['SL_ZIP_CODE'];}
-	  if(isset($_POST['SL_ADDRESS_ALIAS'])){ $data['addressalias']=$_POST['SL_ADDRESS_ALIAS'];}
-	  if(isset($_POST['location_country'])){ $data['country']=$_POST['location_country'];}
-	  if(isset($_POST['SL_FNAME'])){ $data['fname']=$_POST['SL_FNAME'];$data['firstname']=$data['fname'];}
-	  if(isset($_POST['SL_LNAME'])){ $data['lname']=$_POST['SL_LNAME'];$data['lastname']=$data['lname'];}
-	}
-	$ERROR_MESSAGE=Configuration::get('ERROR_MESSAGE');
-	if(Configuration::get('user_require_field')=="1") {	
-	  if((empty($data['city']) && strpos($profilefield,'4') !== false) || empty($data['state'])  || (empty($data['phonenumber'])&& strpos($profilefield,'5') !== false) || (empty($data['address'])&& strpos($profilefield,'6') !== false) || (empty($data['zipcode'])&& strpos($profilefield,'8') !== false)|| (empty($data['country'])&& strpos($profilefield,'3') !== false) || empty($data['email'])|| (empty($data['addressalias'])&& strpos($profilefield,'7') !== false)|| (empty($data['fname'])&& strpos($profilefield,'1') !== false) || (empty($data['lname'])&& strpos($profilefield,'2') !== false)) {
-	  popUpWindow('<p style="color:red; padding:0px;">'.$ERROR_MESSAGE.'</p>',$data);
-	  return;
-	  }
-	    if(!empty($data['country']) && !empty($data['zipcode'])) {
-	      //$check['email']= $data['email'];
-	    $postcode=trim($data['zipcode']);
-	    $zip_code = Db::getInstance()->executeS('SELECT * FROM '._DB_PREFIX_.'country c WHERE c.iso_code = "'.$data['country'].'"');
-   	    $zip_code_format=$zip_code['0']['zip_code_format'];
-	    if(!empty($zip_code_format)) {
-	      $zip_regexp = '/^'.$zip_code_format.'$/ui';
-	      $zip_regexp = str_replace(' ', '( |)', $zip_regexp);
-	      $zip_regexp = str_replace('-', '(-|)', $zip_regexp);
-	      $zip_regexp = str_replace('N', '[0-9]', $zip_regexp);
-	      $zip_regexp = str_replace('L', '[a-zA-Z]', $zip_regexp);
-	      $zip_regexp = str_replace('C', $data['country'], $zip_regexp);
-	      if (!preg_match($zip_regexp, $postcode)) {
-		    //$data = unserialize($cookie->login_radius_data);
-	        popUpWindow('<p style="color:red; padding:0px;margin-bottom: 3px;">'.$ERROR_MESSAGE.'</p><p 
-	style="color: red;margin-bottom: -20px; font-size: 10px;">'.$module->l('Your zip/postal code is incorrect.').'<br />'.$module->l('Must be typed as follows:').' '.str_replace('C', $data['country'], str_replace('N', '0', str_replace('L', 'A', $zip_code_format))).'</p>',$data);
-	        return;
-	      }
-	    }
-	  }
-	}
-	else if (!Validate::isEmail( $data['email'])){
-	popUpWindow('<p style="color:red; padding:0px;">'.$ERROR_MESSAGE.'</p>',$data);
-	  return;
-	}
-	SL_data_save($data);
-	}else{
-	  $msgg=$module->l('Cookie has been deleted, please try again.');
-	  popup_verify($msgg);
-	  }
-	}
-  }
-  
-  /*
-  *  customer account hook that show tpl for Social linking.
-  */
-  public function hookDisplayCustomerAccount($params) {
-    $this->smarty->assign('in_footer', false);
-	return $this->display(__FILE__, 'my-account.tpl');
-  }
-  
-  /*
-  *  my account hook that show tpl for Social linking.
-  */
-  public function hookMyAccountBlock($params) {
-	$this->smarty->assign('in_footer', true);
-	return $this->display(__FILE__, 'my-account.tpl');
-  }
-  
-   /*
+    /*
   * Install hook that  register hook which used by social Login.
   */
-  public function install(){
-	if(!parent::install()
-	  || !$this->registerHook('leftColumn' )
-	  || !$this->registerHook('createAccountTop' )
-	  || !$this->registerHook('rightColumn' )
-	  || !$this->registerHook('top' )
-	  || !$this->registerHook('Header')
-	  || !$this->registerHook('Home')
-	  || !$this->registerHook('Invoice')
-	  || !$this->registerHook('ShoppingCart')
-	  || !$this->registerHook('productfooter')
-	  || !$this->registerHook('customerAccount')
-	  || !$this->registerHook('myAccountBlock')
-	)
-	return false;
-	$this->db_tbl();
-	return true;
-  }
+	public function install(){
+		if(!parent::install()
+		  || !$this->registerHook('leftColumn' )
+		  || !$this->registerHook('createAccountTop' )
+		  || !$this->registerHook('rightColumn' )
+		  || !$this->registerHook('top' )
+		  || !$this->registerHook('Header')
+		  || !$this->registerHook('Home')
+		  || !$this->registerHook('Invoice')
+		  || !$this->registerHook('ShoppingCart')
+		  || !$this->registerHook('productfooter')
+		  || !$this->registerHook('customerAccount')
+		  || !$this->registerHook('myAccountBlock')
+		)
+		return false;
+		$hooks_array = array('leftColumn','rightColumn');
+		foreach($hooks_array as $value) {
+			$this->move_lr_hook_position ($value, 1);
+		}
+		//create the social Login table.
+		$this->db_tbl();
+		return true;
+	}
+	//Social Login table structure.
     public function db_tbl(){
-	$tbl=pSQL(_DB_PREFIX_.'sociallogin');
-	$CREATE_TABLE=<<<SQLQUERY
+		$tbl=pSQL(_DB_PREFIX_.'sociallogin');
+		$CREATE_TABLE=<<<SQLQUERY
 	CREATE TABLE IF NOT EXISTS `$tbl` (
 	`id_customer` int(10) unsigned NOT NULL COMMENT 'foreign key of customers.',
 	`provider_id` varchar(100) NOT NULL,
@@ -318,12 +365,11 @@ $profilefield = implode(';', $profilefield);
 	`verified` tinyint(1) NOT NULL
 	)
 SQLQUERY;
-	Db::getInstance()->Execute($CREATE_TABLE);
+		Db::getInstance()->Execute($CREATE_TABLE);
 	}
-
-/*
-  *  Login Radius Admin UI.
-  */    
+	/*
+	*  Login Radius Admin UI.
+	*/    
    public function getContent(){
 	$html = '';
 	if(Tools::isSubmit('submitKeys'))  {
@@ -425,7 +471,7 @@ SQLQUERY;
 	$html.='
 	<link href="'.__PS_BASE_URI__.'modules/sociallogin/socialloginandsocialshare.css" rel="stylesheet" type="text/css" media="all" />
 	<script type="text/javascript" src="'.__PS_BASE_URI__.'modules/sociallogin/checkapi.js"></script>
-	<script type="text/javascript" src="'.__PS_BASE_URI__.'modules/sociallogin/jquery.ui.sortable.min.js"></script>
+	<script type="text/javascript" src="//code.jquery.com/ui/1.10.0/jquery-ui.js"></script>
 	<script type="text/javascript">
 	function panelshow(id) {
 	if(id=="first") {
@@ -500,10 +546,10 @@ SQLQUERY;
 	<strong>'.$this->l('Thank you for installing the LoginRadius Prestashop Extension!').'</strong>
 	</div>
 	<div class="row" style="color: #000000;width:90%; line-height:160%; background:none;">
-	'.$this->l('To activate the extension, please configure it and manage the social networks from you LoginRadius account. If you do not have an account, click').'<a href="http://www.loginradius.com" target="_blank"> here </a>'.$this->l('and create one for FREE!').'
+	'.$this->l('To activate the extension, please configure it and manage the social networks from your LoginRadius account. If you do not have an account, click').'<a href="http://www.loginradius.com" target="_blank"> here </a>'.$this->l('and create one for FREE!').'
 	</div>
 	<div class="row" style="color: #000000; width:90%; line-height:160%; background:none;">
-	'.$this->l('We also have Social Plugin for').' <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#joomlaextension" target="_blank">Joomla</a>,<a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#wordpressplugin" target="_blank">WordPress</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#drupalmodule" target="_blank">Drupal</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#vbulletinplugin" target="_blank">vBulletin</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#vanillaaddons" target="_blank">VanillaForum</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#magentoextension" target="_blank">Magento</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#osCommerceaddons" target="_blank">osCommerce</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#xcartextension" target="_blank">X-Cart</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#zencartplugin" target="_blank">Zen-Cart</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#dotnetnukemodule" target="_blank">DotNetNuke</a> and <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#blogengineextension" target="_blank">BlogEngine</a>!
+	'.$this->l('We also have Social Plugin for').' <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#joomlaextension" target="_blank">Joomla</a>,<a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#wordpressplugin" target="_blank">WordPress</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#drupalmodule" target="_blank">Drupal</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#vbulletinplugin" target="_blank">vBulletin</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#vanillaaddons" target="_blank">VanillaForum</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#magentoextension" target="_blank">Magento</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#osCommerceaddons" target="_blank">osCommerce</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#xcartextension" target="_blank">X-Cart</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#zencartplugin" target="_blank">Zen-Cart</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#dotnetnukemodule" target="_blank">DotNetNuke</a>, <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#phpbb" target="_blank">phpBB</a> and <a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms#smf" target="_blank">SMF</a>!
 	</div>
 	<div class="row row_button" style="background:none; border:none; background:none;">
 	<div class="button2-left">
@@ -632,7 +678,7 @@ SQLQUERY;
 	<input type="checkbox" name="profilefield[]" value="4" '.(strpos($profilefield,'4') !== false? 'checked="checked"' : '').' /> '.$this->l('City').'</td><td>
 	<input type="checkbox" name="profilefield[]" value="5" '.(strpos($profilefield,'5') !== false? 'checked="checked"' : '').' /> '.$this->l('Mobile Number').'</td><td>
 	<input type="checkbox" name="profilefield[]" value="6" '.(strpos($profilefield,'6') !== false ? 'checked="checked"' : '').' /> '.$this->l('Address').'</td><td>
-	<input type="checkbox" name="profilefield[]" value="7" '.(strpos($profilefield,'7') !== false ? 'checked="checked"' : '').' /> '.$this->l('Address Alias').'
+	<input type="checkbox" name="profilefield[]" value="7" '.(strpos($profilefield,'7') !== false ? 'checked="checked"' : '').' /> '.$this->l('Address Title').'
 	<input type="checkbox" name="profilefield[]" value="8" '.(strpos($profilefield,'8') !== false ? 'checked="checked"' : '').' /> '.$this->l('Zip Code').'
 	</td>
 	</tr>
@@ -661,7 +707,7 @@ SQLQUERY;
 	<th class="head" colspan="2">'.$this->l('User Profile Data Option').'</small></th>
 	</tr>
 	<tr>
-	<td colspan="2" ><span class="subhead">'.$this->l('Do you want to update User Profile Data in your Vanilla database, every time user logs into your website?').'<a title="'.$this->l('If you disable this option, user profile data will be saved only once when user logs in first time at your website, user profile details will not be updated in your Vanilla database, even if user changes his/her social account details.').'" href="javascript:void(0)" style="text-decoration:none"> (<span style="color:#3CF;">?</span>)</a></span><br /><br />
+	<td colspan="2" ><span class="subhead">'.$this->l('Do you want to update User Profile Data in your Prestashop database, every time user logs into your website?').'<a title="'.$this->l('If you disable this option, user profile data will be saved only once when user logs in first time at your website, user profile details will not be updated in your Prestashop database, even if user changes his/her social account details.').'" href="javascript:void(0)" style="text-decoration:none"> (<span style="color:#3CF;">?</span>)</a></span><br /><br />
 	<input type="radio" name="update_user_profile" value="0" '.(!Tools::getValue('update_user_profile', Configuration::get('update_user_profile')) ? 'checked="checked" ' : '').' />'.$this->l(' Yes').'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 	<input type="radio" name="update_user_profile" value="1" '.(Tools::getValue('update_user_profile', Configuration::get('update_user_profile')) ? 'checked="checked" ' : '').'/>'.$this->l(' No').'
 	</td>
@@ -831,13 +877,12 @@ SQLQUERY;
 	<ul class="help_ul">
 	<li><a href="http://support.loginradius.com/customer/portal/articles/1107175-implementation-of-social-login-on-prestashop-v1-5-website" target="_blank">'.$this->l('Plugin Installation, Configuration and Troubleshooting').'</a></li>
 	<li><a href="http://support.loginradius.com/customer/portal/articles/677100-how-to-get-loginradius-api-key-and-secret" target="_blank">'.$this->l('How to get LoginRadius API Key & Secret').'</a></li>
-	<li><a href="http://support.loginradius.com/customer/portal/articles/594031" target="_blank">'.$this->l('Support Documentations').'</a></li>
+	<li><a href="http://support.loginradius.com" target="_blank">'.$this->l('Support Documentations').'</a></li>
 	<li><a href="http://community.loginradius.com/" target="_blank">'.$this->l('Discussion Forum').'</a></li>
-	<li><a href="https://www.loginradius.com/Loginradius/About" target="_blank">'.$this->l('About LoginRadius').'</a></li>
-	<li><a href="https://www.loginradius.com/product/product-overview" target="_blank">'.$this->l('LoginRadius Products').'</a></li>
+	<li><a href="https://www.loginradius.com/loginradius/what-is-loginradius" target="_blank">'.$this->l('About LoginRadius').'</a></li>
+	<li><a href="https://www.loginradius.com/loginradius/product-overview" target="_blank">'.$this->l('LoginRadius Products').'</a></li>
 	<li><a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-cms" target="_blank">'.$this->l('Social Plugins').'</a></li>
 	<li><a href="https://www.loginradius.com/loginradius-for-developers/loginRadius-sdks" target="_blank">'.$this->l('Social SDKs').'</a></li>
-	<li><a href="https://www.loginradius.com/loginradius/Testimonials" target="_blank">'.$this->l('Testimonials').'</a></li>
 	</ul>
 	</div>
 	<div style="clear:both;"></div>

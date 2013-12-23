@@ -42,7 +42,7 @@ $_MODULE['<{sociallogin}prestashop>sociallogin_d4afe7d44a433e6c2d1bbef94ca0893f'
 $_MODULE['<{sociallogin}prestashop>sociallogin_ceabcb26aead18e8c02db8f089357cf1'] = 'Redirect to the following url:';
 $_MODULE['<{sociallogin}prestashop>sociallogin_8103728578274181fb2b037ad6206cfb'] = 'Please enter the Title to be shown on Social Login interface';
 $_MODULE['<{sociallogin}prestashop>sociallogin_8463d72709d821a6a2ea4a05d2103d14'] = 'Do you want your existing user to automatically link to their social accounts in case their Prestashop account email address matches with their social account email ID?';
-$_MODULE['<{sociallogin}prestashop>sociallogin_0738a7d64a062eb37be1ab6b0bcbaf73'] = 'YES, link social accounts to Prestashop accoun';
+$_MODULE['<{sociallogin}prestashop>sociallogin_0738a7d64a062eb37be1ab6b0bcbaf73'] = 'YES, link social accounts to Prestashop account';
 $_MODULE['<{sociallogin}prestashop>sociallogin_36dd4a531698304cbc21c40c35f98f8f'] = 'NO, I want my existing users to continue using native Prestashop login';
 $_MODULE['<{sociallogin}prestashop>sociallogin_6fb105b798561e56defd98f855f5e015'] = 'Do you want to send emails to admin after new User registrations at your website?';
 $_MODULE['<{sociallogin}prestashop>sociallogin_440d66c0e0445a221679d68483e9d8f0'] = 'Do you want to send emails to customer after new User registrations at your website?';

@@ -2,182 +2,226 @@
 if ( !defined( '_PS_VERSION_' ) ){
 exit;
 }
-class LrUser{
-	function __construct(){
-		global $cookie;
-		$module= new sociallogin();
-		include_once("LoginRadiusSDK.php");
-		$secret = trim(Configuration::get('API_SECRET'));
-		$lr_obj=new LoginRadius();
-		$userprofile=$lr_obj->loginradius_get_data($secret);
-		if($lr_obj->IsAuthenticated == true && !$cookie->isLogged()) {
-			$lrdata = loginradius_mapping_profile_data($userprofile);
-			$social_id_exist="SELECT * FROM ".pSQL(_DB_PREFIX_.'sociallogin')." as sl INNER JOIN ".pSQL(_DB_PREFIX_.'customer')." as c WHERE sl.provider_id='".pSQL($lrdata['id'])."' and c.id_customer=sl.id_customer  LIMIT 0,1";
-			$dbObj=Db::getInstance()->ExecuteS($social_id_exist);
-			$td_user="";
-			$user_id_exist=(!empty($dbObj[0]['id_customer'])?$dbObj[0]['id_customer']:"");
-			if($user_id_exist>=1){
-				$active_user=(!empty($dbObj['0']['active'])? $dbObj['0']['active'] :"");
-				$this->loginradius_verified_user_login($user_id_exist,$lrdata,$td_user);
+
+function loginradius_connect(){
+	global $cookie;
+	//create object of soial login class.
+	$module= new sociallogin();
+	include_once("LoginRadiusSDK.php");
+	$secret = trim(Configuration::get('API_SECRET'));
+	$lr_obj=new LoginRadius();
+	//Get the userprofile of authenticate user.
+	$userprofile=$lr_obj->loginradius_get_data($secret);
+	//If user is not logged in and user is authneticated then handle login functionality.
+	if($lr_obj->IsAuthenticated == true && !$cookie->isLogged()) {
+		$lrdata = loginradius_mapping_profile_data($userprofile);
+		//Check Social provider id is already exist.
+		$social_id_exist="SELECT * FROM ".pSQL(_DB_PREFIX_.'sociallogin')." as sl INNER JOIN ".pSQL(_DB_PREFIX_.'customer')." as c WHERE sl.provider_id='".pSQL($lrdata['id'])."' and c.id_customer=sl.id_customer  LIMIT 0,1";
+		$dbObj=Db::getInstance()->ExecuteS($social_id_exist);
+		$td_user="";
+		$user_id_exist=(!empty($dbObj[0]['id_customer'])?$dbObj[0]['id_customer']:"");
+		if($user_id_exist>=1){
+			$active_user=(!empty($dbObj['0']['active'])? $dbObj['0']['active'] :"");
+			//Verify user and provide login.
+			loginradius_verified_user_login($user_id_exist,$lrdata,$td_user);
+		}
+		//If Social provider is is not exist in database.
+		elseif($user_id_exist<1){
+			if(!empty($lrdata['email'])){
+				$user_email_exist = Db::getInstance()->ExecuteS('SELECT * FROM '.pSQL(_DB_PREFIX_.'customer').' as c WHERE c.email="'.$lrdata['email'].'" LIMIT 0,1');
+				$user_id=(!empty($user_email_exist['0']['id_customer'])?$user_email_exist['0']['id_customer']:"");
+				$active_user=(!empty($user_email_exist['0']['active'])? $user_email_exist['0']['active'] :"");
+				if($user_id>=1) {
+					$td_user="yes";
+					if(deletedUser($user_email_exist)){
+						$msg= "<p style ='color:red;'>".$module->all_messages('Authentication failed.')."</p>";
+						popup_verify($msg);
+						return;
+					}
+					if(Configuration::get('ACC_MAP')==0){
+						$tbl=pSQL(_DB_PREFIX_.'sociallogin');
+						$query= "INSERT into $tbl (`id_customer`,`provider_id`,`Provider_name`,`verified`,`rand`) values ('".$user_id."','".$lrdata['id']."' , '".$lrdata['provider']."','1','') ";
+						Db::getInstance()->Execute($query);
+					}
+					loginradius_verified_user_login($user_id,$lrdata,$td_user);
+				}
 			}
-			elseif($user_id_exist<1){
-				if(!empty($lrdata['email'])){
-					$user_email_exist = Db::getInstance()->ExecuteS('SELECT * FROM '.pSQL(_DB_PREFIX_.'customer').' as c WHERE c.email="'.$lrdata['email'].'" LIMIT 0,1');
-					$user_id=(!empty($user_email_exist['0']['id_customer'])?$user_email_exist['0']['id_customer']:"");
-					$active_user=(!empty($user_email_exist['0']['active'])? $user_email_exist['0']['active'] :"");
-					if($user_id>=1) {
-						$td_user="yes";
-						if($this->deletedUser($user_email_exist)){
-							$msg= "<p style ='color:red;'>".$module->all_messages('Authentication failed.')."</p>";
-							popup_verify($msg);
-							return;
-						}
-						if(Configuration::get('ACC_MAP')==0){
-							$tbl=pSQL(_DB_PREFIX_.'sociallogin');
-							$query= "INSERT into $tbl (`id_customer`,`provider_id`,`Provider_name`,`verified`,`rand`) values ('".$user_id."','".$lrdata['id']."' , '".$lrdata['provider']."','1','') ";
-							Db::getInstance()->Execute($query);
-						}
-						$this->loginradius_verified_user_login($user_id,$lrdata,$td_user);
-					}
-				}
-				$lrdata['send_verification_email']='no';
-				if(Configuration::get('user_require_field')=="1") {
-					if(empty($lrdata['email']))
-						$lrdata['send_verification_email']='yes';
-					if(Configuration::get('EMAIL_REQ')=="1" and empty($lrdata['email'])){
-						$lrdata['email']= email_rand($lrdata);	
-						$lrdata['send_verification_email']='no';				
-					}
-					storeInCookie($lrdata);
-					popUpWindow('',$lrdata);
-					return;
-				}
-				if(Configuration::get('EMAIL_REQ')=="0" and empty($lrdata['email'])) {
+			$lrdata['send_verification_email']='no';
+			//new user. user not found in database. set all details
+			if(Configuration::get('user_require_field')=="1") {
+				if(empty($lrdata['email']))
 					$lrdata['send_verification_email']='yes';
-					storeInCookie($lrdata);
-					popUpWindow('',$lrdata);
-					return;
+				if(Configuration::get('EMAIL_REQ')=="1" and empty($lrdata['email'])){
+					$lrdata['email']= email_rand($lrdata);	
+					$lrdata['send_verification_email']='no';				
 				}
-				elseif(Configuration::get('EMAIL_REQ')=="1" and empty($lrdata['email'])){
-					$lrdata['email']= email_rand($lrdata);					
-				}
-				storeAndLogin($lrdata);
-			}
-			elseif($this->deletedUser($dbObj)){
-				$msg= "<p style ='color:red;'><b>".$module->all_messages('Authentication failed.')."</b></p>";
-				popup_verify($msg);
+				//If user is not exist and then add all lrdata into cookie.
+				storeInCookie($lrdata);
+				//Open the popup to get require fields.
+				popUpWindow('',$lrdata);
 				return;
 			}
-			if($active_user==0){
-				$msg= "<p style ='color:red;'><b>".$module->all_messages('User has been disbled or blocked.')."</b></p>";
-				popup_verify($msg);
+			//Save data into cookie and open email popup.
+			if(Configuration::get('EMAIL_REQ')=="0" and empty($lrdata['email'])) {
+				$lrdata['send_verification_email']='yes';
+				//If user is not exist and then add all lrdata into cookie.
+				storeInCookie($lrdata);
+				//Open the popup to get require fields.
+				popUpWindow('',$lrdata);
 				return;
 			}
-		}
-	}
-	public static function linking($arrdata,$userprofile) {	
-		$module= new sociallogin();
-		global $cookie;
-		$cookie->lrmessage ='';
-		if(!empty($userprofile)) {
-			$tbl=pSQL(_DB_PREFIX_.'sociallogin');
-			$getdata = Db::getInstance()->ExecuteS('SELECT * FROM '.pSQL(_DB_PREFIX_.'customer').' as c WHERE c.email='."'$arrdata->email'".' LIMIT 0,1');
-			$num=(!empty($getdata['0']['id_customer'])? $getdata['0']['id_customer']:"");
-			$sql="SELECT COUNT(*) as num from $tbl where `id_customer`='".$num."' and `Provider_name`='".$userprofile->Provider."'";
-			$row = Db::getInstance()->getRow($sql);
-			if($row['num']==0) {
-				$check_user_id = Db::getInstance()->ExecuteS('SELECT c.id_customer FROM '.pSQL(_DB_PREFIX_.'customer').' AS c INNER JOIN '.$tbl.' AS sl ON sl.id_customer=c.id_customer WHERE sl.provider_id= "'. $userprofile->ID .'"');
-				if(empty($check_user_id['0']['id_customer'])) {
-					Db::getInstance()->Execute("DELETE FROM ".$tbl."  WHERE provider_id='". $userprofile->ID ."'");
-				}
-				$lr_id = Db::getInstance()->ExecuteS("SELECT provider_id FROM ".$tbl."  WHERE provider_id= '" . $userprofile->ID . "'");
-				if(!empty($lr_id['0']['provider_id'])) {
-				$cookie->lrmessage= $module->all_messages('Account cannot be mapped as it already exists in database');
-				}else {
-				$query= "INSERT into $tbl (`id_customer`,`provider_id`,`Provider_name`,`verified`,`rand`) values ('$num','".$userprofile->ID."' , '".$userprofile->Provider."','1','') ";
-				Db::getInstance()->Execute($query);
-				$cookie->lrmessage= $module->all_messages('Your account is successfully mapped');
-				}
+			elseif(Configuration::get('EMAIL_REQ')=="1" and empty($lrdata['email'])){
+				$lrdata['email']= email_rand($lrdata);					
 			}
-			else {
-				$cookie->lrmessage= $module->all_messages('Account cannot be mapped as it already exists in database');
-			}
+			//Store user data into database and provide login functionality.
+			storeAndLogin($lrdata);
 		}
-		$loc=$arrdata->currentquerystring;
-		$cookie->currentquerystring='';
-		Tools::redirectLink(urldecode($loc));
-	}
-	function loginradius_verified_user_login($user_id,$lrdata,$td_user=""){ 
-		$module= new sociallogin();
-		$social_id = $lrdata['id'];
-		if($this->deletedUser($user_id)){
-			$msg= "<p style ='color:red;'>".$module->all_messages('Authentication failed.')."</p>";
+		//If user is delete and set action to provide no login to user.
+		elseif(deletedUser($dbObj)){
+			$msg= "<p style ='color:red;'><b>".$module->all_messages('Authentication failed.')."</b></p>";
 			popup_verify($msg);
 			return;
 		}
-		if($this->verifiedUser($user_id,$social_id,$td_user)) {
-			if(Configuration::get('update_user_profile') == 0) 
-				$this->update_user_profile_data($user_id,$lrdata);
-			$this->loginradius_login_user($user_id,$social_id);
+		//If user is blocked.
+		if($active_user==0){
+			$msg= "<p style ='color:red;'><b>".$module->all_messages('User has been disbled or blocked.')."</b></p>";
+			popup_verify($msg);
 			return;
 		}
-		else {
-			$msg= $module->all_messages('Your Confirmation link Has Been Sent To Your Email Address. Please verify your email by clicking on confirmation link.');
-			popup_verify($msg, $social_id);
-			return;
-		}
-	}
-	function deletedUser($user_id){
-		$dbObj = Db::getInstance()->ExecuteS('SELECT * FROM '.pSQL(_DB_PREFIX_.'customer').' as c WHERE c.id_customer='.$user_id.' LIMIT 0,1');
-		$deleted=$dbObj['0']['deleted'];
-		if($deleted==1){
-			return true;
-		}
-		return false;
-	}
-	function verifiedUser($num,$pid,$td_user){
-		$dbObj = Db::getInstance()->ExecuteS('SELECT * FROM '.pSQL(_DB_PREFIX_.'sociallogin').' as c WHERE c.id_customer='." '$num'".' AND c.provider_id='." '$pid'".' LIMIT 0,1');
-		$verified=$dbObj['0']['verified'];
-		$rand=$dbObj['0']['rand'];
-		if($verified==1 || $td_user=="yes"){
-			return true;
-		}
-			return false;
-	}
-	function update_user_profile_data($user_id, $lrdata){
-		$date_upd=date("Y-m-d H:i:s",time());
-		$str="";
-		if(!empty($lrdata['fname'])){
-			$str.="firstname='".$lrdata['fname']."',";
-		}
-		if(!empty($lrdata['lname'])) {
-			$str.="lastname='".$lrdata['lname']."',";
-		}
-		if(!empty($lrdata['gender'])){
-			$gender=((!empty($lrdata['gender']) and (strpos($lrdata['gender'], "f") !== false || (trim($lrdata['gender']) == "F"))) ? 2 : 1);
-			$str.="id_gender='".$gender."',";
-		}
-		if(!empty($lrdata['dob'])) {
-			$dobArr = explode("/",$lrdata['dob']);
-			$dob = $dobArr[2]."-".$dobArr[0]."-".$dobArr[1];
-			$date_of_birth = (!empty($dob) && Validate::isBirthDate($dob) ? $dob : '');
-			$str.="birthday='".$date_of_birth."',";
-		} 
-		Db::getInstance()->Execute("UPDATE "._DB_PREFIX_."customer SET ".$str." date_upd='$date_upd' WHERE 	id_customer	= $user_id");
-		extraFields($lrdata,$user_id,$lrdata['fname'],$lrdata['lname'],'yes');
-	}
-	function loginradius_login_user($user_id,$social_id){
-		$dbObj = Db::getInstance()->ExecuteS('SELECT * FROM '.pSQL(_DB_PREFIX_.'customer').' as c WHERE c.id_customer='." '$user_id' ".' LIMIT 0,1');
-		$arr=array();
-		$arr['id']=$dbObj['0']['id_customer'];
-		$arr['fname']=$dbObj['0']['firstname'];
-		$arr['lname']=$dbObj['0']['lastname'];
-		$arr['email']=$dbObj['0']['email'];
-		$arr['pass']=$dbObj['0']['passwd'];  
-		$arr['loginradius_id']=$social_id;      
-		loginRedirect($arr);
 	}
 }
+/*
+* Provide Social linking.
+*/	
+function linking($arrdata,$userprofile) {
+	$module= new sociallogin();
+	global $cookie;
+	$cookie->lrmessage ='';
+	//check User is authenticate and user data is not empty.
+	if(!empty($userprofile)) {
+		//Check Social ID and  provider is in database.
+		$tbl=pSQL(_DB_PREFIX_.'sociallogin');
+		$getdata = Db::getInstance()->ExecuteS('SELECT * FROM '.pSQL(_DB_PREFIX_.'customer').' as c WHERE c.email='."'$arrdata->email'".' LIMIT 0,1');
+		$num=(!empty($getdata['0']['id_customer'])? $getdata['0']['id_customer']:"");
+		$sql="SELECT COUNT(*) as num from $tbl where `id_customer`='".$num."' and `Provider_name`='".$userprofile->Provider."'";
+		$row = Db::getInstance()->getRow($sql);
+		if($row['num']==0) {
+			//check only social id is in database.
+			$check_user_id = Db::getInstance()->ExecuteS('SELECT c.id_customer FROM '.pSQL(_DB_PREFIX_.'customer').' AS c INNER JOIN '.$tbl.' AS sl ON sl.id_customer=c.id_customer WHERE sl.provider_id= "'. $userprofile->ID .'"');
+			if(empty($check_user_id['0']['id_customer'])) {
+				Db::getInstance()->Execute("DELETE FROM ".$tbl."  WHERE provider_id='". $userprofile->ID ."'");
+			}
+			$lr_id = Db::getInstance()->ExecuteS("SELECT provider_id FROM ".$tbl."  WHERE provider_id= '" . $userprofile->ID . "'");
+			//Present then show warning message.
+			if(!empty($lr_id['0']['provider_id'])) {
+				$cookie->lrmessage= $module->all_messages('Account cannot be mapped as it already exists in database');
+			}
+			else {
+				$query= "INSERT into $tbl (`id_customer`,`provider_id`,`Provider_name`,`verified`,`rand`) values ('$num','".$userprofile->ID."' , '".$userprofile->Provider."','1','') ";
+				Db::getInstance()->Execute($query);
+				$cookie->lrmessage= $module->all_messages('Your account is successfully mapped');
+			}
+		}
+		//Already linked with socialid and provider. 
+		//Show Warning message.
+		else {
+			$cookie->lrmessage= $module->all_messages('This social ID is already linked with an account. Kindly unmap the current ID before linking new Social ID.');
+		}
+	}
+	//After Linking Provide redirection.
+	$loc=$arrdata->currentquerystring;
+	$cookie->currentquerystring='';
+	Tools::redirectLink(urldecode($loc));
+}
+/*
+* Check user is Verified and Show notification message.
+*/
+function loginradius_verified_user_login($user_id,$lrdata,$td_user=""){
+	$module= new sociallogin();
+	$social_id = $lrdata['id'];
+	if(deletedUser($user_id)){
+		$msg= "<p style ='color:red;'>".$module->all_messages('Authentication failed.')."</p>";
+		popup_verify($msg);
+		return;
+	}
+	if(verifiedUser($user_id,$social_id,$td_user)) {
+		if(Configuration::get('update_user_profile') == 0) 
+			update_user_profile_data($user_id,$lrdata);
+		//login User.
+		loginradius_login_user($user_id,$social_id);
+		return;
+	}
+	else {
+		$msg= $module->all_messages('Your confirmation link has been sent to your email address. Please verify your email by clicking on confirmation link.');
+		popup_verify($msg, $social_id);
+		return;
+	}
+}
+/*
+* Check user deleted or not.
+*/
+function deletedUser($user_id){
+	$dbObj = Db::getInstance()->ExecuteS('SELECT * FROM '.pSQL(_DB_PREFIX_.'customer').' as c WHERE c.id_customer='.$user_id.' LIMIT 0,1');
+	$deleted=$dbObj['0']['deleted'];
+	if($deleted==1){
+	return true;
+	}
+	return false;
+}
+/*
+* find user verified or not.
+*/
+function verifiedUser($num,$pid,$td_user){
+	$dbObj = Db::getInstance()->ExecuteS('SELECT * FROM '.pSQL(_DB_PREFIX_.'sociallogin').' as c WHERE c.id_customer='." '$num'".' AND c.provider_id='." '$pid'".' LIMIT 0,1');
+	$verified=$dbObj['0']['verified'];
+	$rand=$dbObj['0']['rand'];
+	if($verified==1 || $td_user=="yes"){
+		return true;
+	}
+	return false;
+}
+/*
+* Update the user profile data.
+*/
+function update_user_profile_data($user_id, $lrdata){
+	$date_upd=date("Y-m-d H:i:s",time());
+	$str="";
+	if(!empty($lrdata['fname'])){
+		$str.="firstname='".$lrdata['fname']."',";
+	}
+	if(!empty($lrdata['lname'])) {
+		$str.="lastname='".$lrdata['lname']."',";
+	}
+	if(!empty($lrdata['gender'])){
+		$gender=((!empty($lrdata['gender']) and (strpos($lrdata['gender'], "f") !== false || (trim($lrdata['gender']) == "F"))) ? 2 : 1);
+		$str.="id_gender='".$gender."',";
+	}
+	if(!empty($lrdata['dob'])) {
+		$dobArr = explode("/",$lrdata['dob']);
+		$dob = $dobArr[2]."-".$dobArr[0]."-".$dobArr[1];
+		$date_of_birth = (!empty($dob) && Validate::isBirthDate($dob) ? $dob : '');
+		$str.="birthday='".$date_of_birth."',";
+	} 
+	Db::getInstance()->Execute("UPDATE "._DB_PREFIX_."customer SET ".$str." date_upd='$date_upd' WHERE 	id_customer	= $user_id");
+	extraFields($lrdata,$user_id,$lrdata['fname'],$lrdata['lname'],'yes');
+}
+/*
+* Save logged user credentaisl to array.
+*/
+function loginradius_login_user($user_id,$social_id){
+	$dbObj = Db::getInstance()->ExecuteS('SELECT * FROM '.pSQL(_DB_PREFIX_.'customer').' as c WHERE c.id_customer='." '$user_id' ".' LIMIT 0,1');
+	$arr=array();
+	$arr['id']=$dbObj['0']['id_customer'];
+	$arr['fname']=$dbObj['0']['firstname'];
+	$arr['lname']=$dbObj['0']['lastname'];
+	$arr['email']=$dbObj['0']['email'];
+	$arr['pass']=$dbObj['0']['passwd'];  
+	$arr['loginradius_id']=$social_id;      
+	loginRedirect($arr);
+}
+/*
+* Social Login Interface Script Code.
+*/
 function loginradius_interface_script() {
 	$loginradius_apikey = trim(Configuration::get('API_KEY'));
 	$http = ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']!='Off' && !empty($_SERVER['HTTPS'])) ? "https://" : "http://");
@@ -189,8 +233,10 @@ function loginradius_interface_script() {
 	return $loginradius_interface_script ='<script src="//hub.loginradius.com/include/js/LoginRadius.js" ></script> <script type="text/javascript"> 
 	function loginradius_interface() { $ui = LoginRadius_SocialLogin.lr_login_settings;$ui.interfacesize = "small";$ui.lrinterfacebackground="' . $interfacebackgroundcolor . '";$ui.noofcolumns=' . $interfacecolumn . ';$ui.apikey = "'.$loginradius_apikey.'";$ui.callback="'.$loc.'"; $ui.lrinterfacecontainer ="interfacecontainerdiv"; LoginRadius_SocialLogin.init(options); }var options={}; options.login=true; LoginRadius_SocialLogin.util.ready(loginradius_interface); </script>';
 }
-
-function loginradius_horizontal_share_script() {
+/*
+* Horizontal Social Sharing Widget Script Code.
+*/
+	function loginradius_horizontal_share_script() {
 	$share_script='<script type="text/javascript">var islrsharing = true; var islrsocialcounter = true;var hybridsharing = true;</script><script type="text/javascript" src="//share.loginradius.com/Content/js/LoginRadius.js" id="lrsharescript"></script>';
 	$horizontal_theme = Configuration::get('chooseshare')? Configuration::get('chooseshare'):"0";
 	if($horizontal_theme == 8 || $horizontal_theme == 9 ) {
@@ -211,24 +257,26 @@ function loginradius_horizontal_share_script() {
 	else {
 		$rearrange_settings = unserialize(Configuration::get('rearrange_settings'));
 		if(empty($rearrange_settings)) {
-			$rearrange_settings = array('facebook', 'googleplus', 'twitter', 'linkedin', 'pinterest');
+		$rearrange_settings = array('facebook', 'googleplus', 'twitter', 'linkedin', 'pinterest');
 		}
 		$providers = implode('","', $rearrange_settings);
 		if($horizontal_theme == 2 || $horizontal_theme == 3) 
-			$interface='simpleimage';
+		$interface='simpleimage';
 		else 
-			$interface='horizontal';
+		$interface='horizontal';
 		if($horizontal_theme == 1 || $horizontal_theme == 3) 
-			$size='16';
+		$size='16';
 		else
-			$size='32';
+		$size='32';
 		$loginradius_apikey = trim(Configuration::get('API_KEY'));
 		$sharecounttype = (!empty($loginradius_apikey) ? ('$u.apikey="'.$loginradius_apikey.'";$u.sharecounttype='."'url'".';') : '$u.sharecounttype='."'url'".';'); 
 		$share_script .= '<script type="text/javascript">LoginRadius.util.ready(function () { $i = $SS.Interface.' . $interface . '; $SS.Providers.Top = ["' . $providers . '"]; $u = LoginRadius.user_settings; ' . $sharecounttype . ' $i.size = ' . $size . ';$i.show("lrsharecontainer"); });</script>'; 
 	}
 	return $share_script;
 }
-
+/*
+* Vertical Social Sharing Widget Script Code.
+*/
 function loginradius_vertical_share_script() {
 	$share_script='<script type="text/javascript">var islrsharing = true; var islrsocialcounter = true;var hybridsharing = true;</script><script type="text/javascript" src="//share.loginradius.com/Content/js/LoginRadius.js" id="lrsharescript"></script>';
 	$vertical_theme = Configuration::get('chooseverticalshare')? Configuration::get('chooseverticalshare'):"6";
@@ -281,7 +329,7 @@ function loginradius_vertical_share_script() {
 			$size='16';
 		$loginradius_apikey = trim(Configuration::get('API_KEY'));
 		$sharecounttype = (!empty($loginradius_apikey) ? ('$u.apikey="'.$loginradius_apikey.'";$u.sharecounttype='."'url'".';') : '$u.sharecounttype='."'url'".';'); 	
-		$share_script .= '</script> <script type="text/javascript">LoginRadius.util.ready(function () { $i = $SS.Interface.' . $interface . '; $SS.Providers.Top = ["' . $providers . '"]; $u = LoginRadius.user_settings; ' . $sharecounttype . ' $i.size = ' . $size . ';';
+		$share_script .= '<script type="text/javascript">LoginRadius.util.ready(function () { $i = $SS.Interface.' . $interface . '; $SS.Providers.Top = ["' . $providers . '"]; $u = LoginRadius.user_settings; ' . $sharecounttype . ' $i.size = ' . $size . ';';
 		$choosesharepos = Configuration::get('choosesharepos');
 		if($choosesharepos == 0 ) {
 			$position1 = 'top';
@@ -341,7 +389,9 @@ function redirectURL(){
 	}
 	return $redirect;
 }
-
+/*
+* Email verification link when user click on resend email buttuon.
+*/
 function login_radius_resend_email_verification($social_id){
 	$module= new sociallogin();
 	$getdata = Db::getInstance()->ExecuteS("SELECT * from "._DB_PREFIX_."customer AS c INNER JOIN "._DB_PREFIX_."sociallogin AS sl ON sl.id_customer=c.id_customer  WHERE sl.provider_id='$social_id'");
@@ -360,7 +410,6 @@ function login_radius_resend_email_verification($social_id){
 		SL_email($to,$sub,$msgg,$getdata['0']['firstname'],$getdata['0']['lastname'],$social_id);
 	}
 }
-
 /*
 * Save the logged in user credentails in cookie.
 */
@@ -381,7 +430,6 @@ function loginRedirect($arr){
 	$redirect=redirectURL();
 	Tools::redirectLink($redirect);
 }
-
 /*
 * When user have Email address then check login functionaity
 */
@@ -436,7 +484,8 @@ function storeAndLogin($user_profile_data, $rand=''){
 		if($item['field_name']=='optin')
 			$optin='1';
 	}
-	$query= "INSERT into "._DB_PREFIX_."customer (`id_gender`,`id_default_group`,`firstname`,`lastname`,`email`,`passwd`,`last_passwd_gen`,`birthday`,`newsletter`,`optin`,`active`,`date_add`,`date_upd`,`secure_key` ) values ('$gender','1','$fname','$lname','$email','$pass','$last_pass_gen','$date_of_birth','$newsletter','$optin','1','$date_added','$date_updated','$s_key') ";
+	$default_group = (int)Configuration::get('PS_CUSTOMER_GROUP');
+	$query= "INSERT into "._DB_PREFIX_."customer (`id_gender`,`id_default_group`,`firstname`,`lastname`,`email`,`passwd`,`last_passwd_gen`,`birthday`,`newsletter`,`optin`,`active`,`date_add`,`date_upd`,`secure_key` ) values ('$gender','$default_group','$fname','$lname','$email','$pass','$last_pass_gen','$date_of_birth','$newsletter','$optin','1','$date_added','$date_updated','$s_key') ";
 	Db::getInstance()->Execute($query);
 	$insert_id=(int)Db::getInstance()->Insert_ID();
 	$tbl=pSQL(_DB_PREFIX_.'sociallogin');
@@ -446,7 +495,7 @@ function storeAndLogin($user_profile_data, $rand=''){
 	//extra data from here later to complete
 	$tbl=pSQL(_DB_PREFIX_.'customer_group');
 	Db::getInstance()->Execute("DELETE FROM $tbl WHERE id_customer='$insert_id'");
-	$query= "INSERT into $tbl (`id_customer`,`id_group`) values ('$insert_id','1') ";
+	$query= "INSERT into $tbl (`id_customer`,`id_group`) values ('$insert_id','$default_group') ";
 	Db::getInstance()->Execute($query);
 	extraFields($user_profile_data,$insert_id,$fname,$lname);
 	if(!empty($rand) && $user_profile_data['send_verification_email'] == 'yes'){
@@ -475,7 +524,6 @@ function storeAndLogin($user_profile_data, $rand=''){
 		loginRedirect($arr);	
 	}
 }
-
 /*
 * save the user data in cookie.
 */
@@ -483,228 +531,71 @@ function storeInCookie($user_profile_data){
 	global $cookie;
 	$cookie->login_radius_data =serialize($user_profile_data);
 }
-
 /*
 * Show poup window for Email and Required fields.
 */
 function popUpWindow($msg='',$data=array()){
 	$module= new sociallogin();
 	$style='style="padding:10px 11px 10px 30px;overflow-y:auto;height:auto;"';
+	$top_style= 'style="top:50%"';
 	$profilefield=unserialize(Configuration::get('profilefield'));
 	if(empty($profilefield)) {
 		$profilefield[] = '3';
 	}
 	if(Configuration::get('user_require_field')=="1") {
 		$height =100;
+		$top_style_value =50;
 		for($i=1;$i <sizeof($profilefield)-1;$i++) {
 			$height +=50;
+			$top_style_value -= 5;
 		}
+		$top_style= 'style=top:'.$top_style_value.'%;"';
 		$style='style="padding:10px 11px 10px 30px;overflow-y:auto;height:'.$height.'px;"';
 	}
 	$profilefield = implode(';', $profilefield);
 	Tools::addCSS(__PS_BASE_URI__.'modules/sociallogin/sociallogin_style.css');
 	?>
-	<!-- <link rel="stylesheet" type="text/css" href="/modules/sociallogin/sociallogin_style.css" />-->
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.0/jquery.min.js"></script>
 	<script language="javascript">
-	jQuery(document).ready(function($){
-	/*The country onchange starts here*/
-	var orig_html;
-	var orig_value;
-	var state_value;
-	var us_states = {AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California', CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', DC: 'District of Columbia', FL: 'Florida', GA: 'Georgia', HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa', KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland', MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi', MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey', NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio', OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina', SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont', VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming'};
-	var ca_states = {BC:"British Columbia",ON:"Ontario",NF:"Newfoundland",NS:"Nova Scotia",PE:"Prince Edward Island",NB:"New Brunswick",QC:"Quebec",MB:"Manitoba",SK:"Saskatchewan",AB:"Alberta",NT:"Northwest Territories",YT:"Yukon Territory"};
-	var mx_states = {AGS:"Aguascalientes",BCN: "Baja California",BCS: "Baja California Sur", CAM:"Campeche",CHP: "Chiapas", CHH:"Chihuahua",COA: "Coahuila", COL:"Colima", DIF:"Distrito Federal", DUR:"Durango",GUA: "Guanajuato",GRO: "Guerrero", HID:"Hidalgo", JAL:"Jalisco", MEX:"Estado de Mexico",MIC: "Michoacan de Ocampo", MOR:"Morelos", NAY:"Nayarit", NLE:"Nuevo Leon", OAX:"Oaxaca", PUE:"Puebla", QUE:"Queretaro de Arteaga",ROO: "Quintana Roo", SLP:"San Luis Potosi",SIN: "Sinaloa", SON:"Sonora", TAB:"Tabasco", TAM:"Tamaulipas", TLA:"Tlaxcala", VER:"Veracruz-Llave", YUC:"Yucatan", ZAC:"Zacatecas"};
-	var ar_states = {B:"Buenos Aires",K:"Catamarca", H:"Chaco", U:"Chubut", C:"Ciudad de Buenos Aires", X:"Córdoba", W: "Corrientes" , E:"Entre Rios", P:"Formosa", Y:"Jujuy",L: "La Pampa", F:"La Rioja", M:"Mendoza", N:"Misiones", Q:"Neuquen", R:"Rio Negro",A:"Salta", J:"San Juan",D: "San Luis", Z:"Santa Cruz",S: "Santa Fe", G:"Santiago del Estero", V:"Tierra del Fuego", T:"Tucuman"};
-	var it_states = {AG:"Agrigento" ,AL:"Alessandria" ,AN: "Ancona", AO:"Aosta" ,AR:"Arezzo",AP: "Ascoli Piceno", AT: "Asti", AV: "Avellino" ,BA: "Bari" ,BT:"Barletta-Andria-Trani" ,BL:"Belluno" ,BN:"Benevento" ,BG:"Bergamo" ,BI:"Biella" ,BO:"Bologna" ,BZ:"Bolzano" ,BS: "Brescia" ,BR :"Brindisi" ,CA :"Cagliari", CL: "Caltanissetta" ,CB :"Campobasso" ,CI:"Carbonia-Iglesias" ,CE:"Caserta" ,CT:"Catania" ,CZ:"Catanzaro", CH: "Chieti" ,CO: "Como" ,CS: "Cosenza" ,CR: "Cremona" ,KR: "Crotone" ,CN: "Cuneo" ,EN: "Enna" ,FM: "Fermo" ,FE: "Ferrara" ,FI: "Firenze" ,FG: "Foggia", FC:"Forlì-Cesena" ,FR:"Frosinone" ,GE:"Genova" ,GO:"Gorizia" ,GR:"Grosseto" ,IM:"Imperia" ,IS:"Isernia" ,AQ:"L'Aquila" ,SP:"La Spezia" ,LT:"Latina" ,LE:"Lecce" ,LC: "Lecco" ,LI: 	"Livorno" ,LO: "Lodi" ,LU:"Lucca" ,MC: "Macerata" ,MN:"Mantova" ,MS: "Massa" ,MT: "Matera" ,VS: 	"Medio Campidano" ,ME:	"Messina" ,MT:"Milano" ,MO:"Modena" ,MB:"Monza e della Brianza" ,NA:"Napoli" ,NO:	"Novara" ,NU:"Nuoro" ,OG:"Ogliastra",OT:	"Olbia-Tempio",OR:"Oristano" ,PD:"Padova" ,PA: "Palermo" ,PR: "Parma" ,PV: "Pavia" ,PG:"Perugia" ,PU: "Pesaro-Urbino",PE:"Pescara" ,PC: "Piacenza" ,PI: "Pisa" ,PT: "Pistoia" ,PN:"Pordenone" ,PZ:"Potenza" ,PO:"Prato" ,RG:"Ragusa" ,RA:"Ravenna" ,RC: "Reggio Calabria" ,RE: "Reggio Emilia",RI:"Rieti" ,RN: "Rimini",RM: "Roma" ,RO:"Rovigo",SA: "Salerno" ,SS: "Sassari" ,SV: "Savona" ,SI: "Siena" ,SR:"Siracusa" ,SO: "Sondrio" ,TA:"Taranto" ,TE: "Teramo" ,TR:"Terni" ,TO: "Torino" ,TP: "Trapani" ,TN: "Trento" ,TV:"Treviso" ,TS:"Trieste" ,UD: "Udine" ,VA: "Varese",VE: "Venezia" ,VB:"Verbano-Cusio-Ossola" ,VC:"Vercelli" ,VR:"Verona",VV:"Vibo Valentia" ,VI: "Vicenza" ,VT:"Viterbo"};
-	var id_states= {	AC:"Aceh",BA: "Bali", BB:"Bangka",BT: "Banten",BE:"Bengkulu", JT:"Central Java",KT:"Central Kalimantan",ST:"Central Sulawesi",JI:"Coat of arms of East Java",KI:"East kalimantan",NT:"East Nusa Tenggara",GO:"Lambang propinsi",JK:"Jakarta",JA:"Jambi",LA:"Lampung",MA:"Maluku",MU:"North Maluku",SA:"North Sulawesi",SU:"North Sumatra",PA:"Papua",RI:"Riau",KR:"Lambang Riau",SG:"Southeast Sulawesi",KS:"South Kalimantan",SN:"South Sulawesi",SS:"South Sumatra",JB:"West Java",KB:"West Kalimantan",NB:"West Nusa Tenggara",PB:"Lambang Provinsi Papua Barat",SR:"West Sulawesi",SB:"West Sumatra",YO:"Yogyakarta"}; 
-	var jp_states={  01 : "Aichi",  02 : "Akita",03 : "Aomori",04 : "Chiba",05 : "Ehime",06 : "Fukui", 07 : "Fukuoka",08 : "Fukushima",09 : "Gifu", 10 : "Gumma",11 : "Hiroshima",12 : "Hokkaido", 13 : "Hyogo",14 : "Ibaraki",15 : "Ishikawa", 16 : "Iwate",17 : "Kagawa",18 : "Kagoshima",19 : "Kanagawa",20 : "Kochi",21 : "Kumamoto",22 : "Kyoto",23 : "Mie",24 : "Miyagi",25 : "Miyazaki",26 : "Nagano",27 : "Nagasaki",28 : "Nara",29 : "Niigata",30 : "Oita",31 : "Okayama",32 : "Osaka",33 : "Saga",34 : "Saitama",35 : "Shiga",36 : "Shimane",37 : "Shizuoka",38 : "Tochigi",39 : "Tokushima",40 : "Tokyo",41 : "Tottori",42 : "Toyama",43 : "Wakayama",44 : "Yamagata",45 : "Yamaguchi",46 : "Yamanashi",47 : "Okinawa"};
-	var $el = $("#location-country");
-	$el.data('oldval', $el.val());
-	$el.change(function(){
-	var $this = $(this);
-	if(this.value=="US"){
-		document.getElementById('location-state-div').style.display='block';
-		var str = '<span class="spantxt">State:</span><select class="inputtxt" name="location-state" id="location-state">';
-		orig_html = $("#location-state-div").html();
-		orig_value = $("#location-state").val();
-		for(var st in us_states){
-		if(st == state_value)
-			str += '<option value="'+st+'" selected="selected">'+us_states[st]+'</option>';
-		else
-			str += '<option value="'+st+'">'+us_states[st]+'</option>';
-		}
-		str += "</select>";
-		$("#location-state-div").html(str);
-		$this.data('oldval', $this.val());
-	}
-	else if(this.value=="CA"){
-		document.getElementById('location-state-div').style.display='block';
-		var str = '<span class="spantxt">State:</span><select class="inputtxt" name="location-state" id="location-state">';
-		orig_html = $("#location-state-div").html();
-		orig_value = $("#location-state").val();
-		for(var st in ca_states){
-		if(st == state_value)
-			str += '<option value="'+st+'" selected="selected">'+ca_states[st]+'</option>';
-		else
-			str += '<option value="'+st+'">'+ca_states[st]+'</option>'; 
-		}
-		str += "</select>";
-		$("#location-state-div").html(str);
-		$this.data('oldval', $this.val());
-	}
-	else if(this.value=="MX"){
-		document.getElementById('location-state-div').style.display='block';
-		var str = '<span class="spantxt">State:</span><select class="inputtxt" name="location-state" id="location-state">';
-		orig_html = $("#location-state-div").html();
-		orig_value = $("#location-state").val();
-		for(var st in mx_states){
-			if(st == state_value)
-			str += '<option value="'+st+'" selected="selected">'+mx_states[st]+'</option>';
-			else
-			str += '<option value="'+st+'">'+mx_states[st]+'</option>';
-		}
-		str += "</select>";
-		$("#location-state-div").html(str);
-		$this.data('oldval', $this.val());
-	}
-	else if(this.value=="AR"){
-		document.getElementById('location-state-div').style.display='block';
-		var str = '<span class="spantxt">State:</span><select class="inputtxt" name="location-state" id="location-state">';
-		orig_html = $("#location-state-div").html();
-		orig_value = $("#location-state").val();
-		for(var st in ar_states){
-			if(st == state_value)
-			str += '<option value="'+st+'" selected="selected">'+ar_states[st]+'</option>';
-			else
-			str += '<option value="'+st+'">'+ar_states[st]+'</option>';
-		}
-		str += "</select>";
-		$("#location-state-div").html(str);
-		$this.data('oldval', $this.val());
-	}
-	else if(this.value=="JP"){
-		document.getElementById('location-state-div').style.display='block';
-		var str = '<span class="spantxt">State:</span><select class="inputtxt" name="location-state" id="location-state">';
-		orig_html = $("#location-state-div").html();
-		orig_value = $("#location-state").val();
-		for(var st in jp_states){
-			if(st == state_value)
-				str += '<option value="'+st+'" selected="selected">'+jp_states[st]+'</option>';
-			else
-				str += '<option value="'+st+'">'+jp_states[st]+'</option>';
-		}
-		str += "</select>";
-		$("#location-state-div").html(str);
-		$this.data('oldval', $this.val());
-	}
-	else if(this.value=="ID"){
-		document.getElementById('location-state-div').style.display='block';
-		var str = '<span class="spantxt">State:</span><select class="inputtxt" name="location-state" id="location-state">';
-		orig_html = $("#location-state-div").html();
-		orig_value = $("#location-state").val();
-		for(var st in id_states){
-		if(st == state_value)
-			str += '<option value="'+st+'" selected="selected">'+id_states[st]+'</option>';
-		else
-			str += '<option value="'+st+'">'+id_states[st]+'</option>';
-		}
-		str += "</select>";
-		$("#location-state-div").html(str);
-		$this.data('oldval', $this.val());
-	}
-	else if(this.value=="IT"){
-		document.getElementById('location-state-div').style.display='block';
-		var str = '<span class="spantxt">State:</span><select class="inputtxt" name="location-state" id="location-state">';
-		orig_html = $("#location-state-div").html();
-		orig_value = $("#location-state").val();
-		for(var st in it_states){
-		if(st == state_value)
-			str += '<option value="'+st+'" selected="selected">'+it_states[st]+'</option>';
-		else
-			str += '<option value="'+st+'">'+it_states[st]+'</option>';
-		}
-		str += "</select>";
-		$("#location-state-div").html(str);
-		$this.data('oldval', $this.val());
-	}
-	else {
-		document.getElementById('location-state-div').style.display='none';
-	}
-	});
-	});
-	function popupvalidation() {
-		var filter = /^([a-zA-Z0-9_\.\-])+\@(([a-zA-Z0-9\-])+\.)+([a-zA-Z0-9]{2,4})+$/;
-		var loginRadiusForm=document.getElementById("validfrm");
-		for(var i = 0; i < loginRadiusForm.elements.length; i++){
-			if(loginRadiusForm.elements[i].id=="location-country") {
-			if(loginRadiusForm.elements[i].value == 0){
-			document.getElementById('textmatter').style.color="#ff0000";
-			loginRadiusForm.elements[i].style.borderColor="#ff0000";
-			loginRadiusForm.elements[i].focus();
-			return false;
-				}
-			}
-			if(loginRadiusForm.elements[i].value.trim() == ""){
-				document.getElementById('textmatter').style.color="#ff0000";
-				loginRadiusForm.elements[i].style.borderColor="#ff0000";
-				loginRadiusForm.elements[i].focus();
-				return false;
-			}
-			else {
-				document.getElementById('textmatter').style.color="#666666";
-				loginRadiusForm.elements[i].style.borderColor="#E5E5E5";
-			}
-			if(loginRadiusForm.elements[i].id=="SL_PHONE") {
-				if(isNaN(loginRadiusForm.elements[i].value)==true) {
-					document.getElementById('textmatter').style.color="#ff0000";
-					loginRadiusForm.elements[i].style.borderColor="#ff0000";
-					loginRadiusForm.elements[i].focus();
-					return false;
-				}
-			}
-			if(loginRadiusForm.elements[i].id=="SL_EMAIL") {
-				var email=loginRadiusForm.elements[i].value;
-				var atPosition = email.indexOf("@");
-				var dotPosition = email.lastIndexOf(".");
-				if(atPosition < 1 || dotPosition < atPosition+2 || dotPosition+2>=email.length) {
-				document.getElementById('textmatter').style.color="#ff0000";
-				loginRadiusForm.elements[i].style.borderStyle="solid";
-				loginRadiusForm.elements[i].style.borderColor="#ff0000";
-				loginRadiusForm.elements[i].focus();
-				return false;
-				}
-				else
-				{
-				document.getElementById('textmatter').style.color="#666666";
-				loginRadiusForm.elements[i].style.borderColor="#E5E5E5";
-				}
-			}
-		}
-	return true;
-}
+	jQuery(document).ready(function(b){var d={AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",CT:"Connecticut",DE:"Delaware",DC:"District of Columbia",FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",NM:"New Mexico",
+NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",VA:"Virginia",WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming"},f={BC:"British Columbia",ON:"Ontario",NF:"Newfoundland",NS:"Nova Scotia",PE:"Prince Edward Island",NB:"New Brunswick",QC:"Quebec",MB:"Manitoba",SK:"Saskatchewan",AB:"Alberta",NT:"Northwest Territories",YT:"Yukon Territory"},
+g={AGS:"Aguascalientes",BCN:"Baja California",BCS:"Baja California Sur",CAM:"Campeche",CHP:"Chiapas",CHH:"Chihuahua",COA:"Coahuila",COL:"Colima",DIF:"Distrito Federal",DUR:"Durango",GUA:"Guanajuato",GRO:"Guerrero",HID:"Hidalgo",JAL:"Jalisco",MEX:"Estado de Mexico",MIC:"Michoacan de Ocampo",MOR:"Morelos",NAY:"Nayarit",NLE:"Nuevo Leon",OAX:"Oaxaca",PUE:"Puebla",QUE:"Queretaro de Arteaga",ROO:"Quintana Roo",SLP:"San Luis Potosi",SIN:"Sinaloa",SON:"Sonora",TAB:"Tabasco",TAM:"Tamaulipas",TLA:"Tlaxcala",
+VER:"Veracruz-Llave",YUC:"Yucatan",ZAC:"Zacatecas"},h={B:"Buenos Aires",K:"Catamarca",H:"Chaco",U:"Chubut",C:"Ciudad de Buenos Aires",X:"C\u00f3rdoba",W:"Corrientes",E:"Entre Rios",P:"Formosa",Y:"Jujuy",L:"La Pampa",F:"La Rioja",M:"Mendoza",N:"Misiones",Q:"Neuquen",R:"Rio Negro",A:"Salta",J:"San Juan",D:"San Luis",Z:"Santa Cruz",S:"Santa Fe",G:"Santiago del Estero",V:"Tierra del Fuego",T:"Tucuman"},k={AG:"Agrigento",AL:"Alessandria",AN:"Ancona",AO:"Aosta",AR:"Arezzo",AP:"Ascoli Piceno",AT:"Asti",
+AV:"Avellino",BA:"Bari",BT:"Barletta-Andria-Trani",BL:"Belluno",BN:"Benevento",BG:"Bergamo",BI:"Biella",BO:"Bologna",BZ:"Bolzano",BS:"Brescia",BR:"Brindisi",CA:"Cagliari",CL:"Caltanissetta",CB:"Campobasso",CI:"Carbonia-Iglesias",CE:"Caserta",CT:"Catania",CZ:"Catanzaro",CH:"Chieti",CO:"Como",CS:"Cosenza",CR:"Cremona",KR:"Crotone",CN:"Cuneo",EN:"Enna",FM:"Fermo",FE:"Ferrara",FI:"Firenze",FG:"Foggia",FC:"Forl\u00ec-Cesena",FR:"Frosinone",GE:"Genova",GO:"Gorizia",GR:"Grosseto",IM:"Imperia",IS:"Isernia",
+AQ:"L'Aquila",SP:"La Spezia",LT:"Latina",LE:"Lecce",LC:"Lecco",LI:"Livorno",LO:"Lodi",LU:"Lucca",MC:"Macerata",MN:"Mantova",MS:"Massa",MT:"Matera",VS:"Medio Campidano",ME:"Messina",MT:"Milano",MO:"Modena",MB:"Monza e della Brianza",NA:"Napoli",NO:"Novara",NU:"Nuoro",OG:"Ogliastra",OT:"Olbia-Tempio",OR:"Oristano",PD:"Padova",PA:"Palermo",PR:"Parma",PV:"Pavia",PG:"Perugia",PU:"Pesaro-Urbino",PE:"Pescara",PC:"Piacenza",PI:"Pisa",PT:"Pistoia",PN:"Pordenone",PZ:"Potenza",PO:"Prato",RG:"Ragusa",RA:"Ravenna",
+RC:"Reggio Calabria",RE:"Reggio Emilia",RI:"Rieti",RN:"Rimini",RM:"Roma",RO:"Rovigo",SA:"Salerno",SS:"Sassari",SV:"Savona",SI:"Siena",SR:"Siracusa",SO:"Sondrio",TA:"Taranto",TE:"Teramo",TR:"Terni",TO:"Torino",TP:"Trapani",TN:"Trento",TV:"Treviso",TS:"Trieste",UD:"Udine",VA:"Varese",VE:"Venezia",VB:"Verbano-Cusio-Ossola",VC:"Vercelli",VR:"Verona",VV:"Vibo Valentia",VI:"Vicenza",VT:"Viterbo"},l={AC:"Aceh",BA:"Bali",BB:"Bangka",BT:"Banten",BE:"Bengkulu",JT:"Central Java",KT:"Central Kalimantan",ST:"Central Sulawesi",
+JI:"Coat of arms of East Java",KI:"East kalimantan",NT:"East Nusa Tenggara",GO:"Lambang propinsi",JK:"Jakarta",JA:"Jambi",LA:"Lampung",MA:"Maluku",MU:"North Maluku",SA:"North Sulawesi",SU:"North Sumatra",PA:"Papua",RI:"Riau",KR:"Lambang Riau",SG:"Southeast Sulawesi",KS:"South Kalimantan",SN:"South Sulawesi",SS:"South Sumatra",JB:"West Java",KB:"West Kalimantan",NB:"West Nusa Tenggara",PB:"Lambang Provinsi Papua Barat",SR:"West Sulawesi",SB:"West Sumatra",YO:"Yogyakarta"},m={1:"Aichi",2:"Akita",3:"Aomori",
+4:"Chiba",5:"Ehime",6:"Fukui",7:"Fukuoka",8:"Fukushima",9:"Gifu",10:"Gumma",11:"Hiroshima",12:"Hokkaido",13:"Hyogo",14:"Ibaraki",15:"Ishikawa",16:"Iwate",17:"Kagawa",18:"Kagoshima",19:"Kanagawa",20:"Kochi",21:"Kumamoto",22:"Kyoto",23:"Mie",24:"Miyagi",25:"Miyazaki",26:"Nagano",27:"Nagasaki",28:"Nara",29:"Niigata",30:"Oita",31:"Okayama",32:"Osaka",33:"Saga",34:"Saitama",35:"Shiga",36:"Shimane",37:"Shizuoka",38:"Tochigi",39:"Tokushima",40:"Tokyo",41:"Tottori",42:"Toyama",43:"Wakayama",44:"Yamagata",
+45:"Yamaguchi",46:"Yamanashi",47:"Okinawa"},n=b("#location-country");n.data("oldval",n.val());n.change(function(){var e=b(this);if("US"==this.value){document.getElementById("location-state-div").style.display="block";var a='<span class="spantxt">State:</span><select class="inputtxt" name="location-state" id="location-state">';b("#location-state-div").html();b("#location-state").val();for(var c in d)a=void 0==c?a+('<option value="'+c+'" selected="selected">'+d[c]+"</option>"):a+('<option value="'+
+c+'">'+d[c]+"</option>");a+="</select>";b("#location-state-div").html(a);e.data("oldval",e.val())}else if("CA"==this.value){document.getElementById("location-state-div").style.display="block";a='<span class="spantxt">State:</span><select class="inputtxt" name="location-state" id="location-state">';b("#location-state-div").html();b("#location-state").val();for(c in f)a=void 0==c?a+('<option value="'+c+'" selected="selected">'+f[c]+"</option>"):a+('<option value="'+c+'">'+f[c]+"</option>");a+="</select>";
+b("#location-state-div").html(a);e.data("oldval",e.val())}else if("MX"==this.value){document.getElementById("location-state-div").style.display="block";a='<span class="spantxt">State:</span><select class="inputtxt" name="location-state" id="location-state">';b("#location-state-div").html();b("#location-state").val();for(c in g)a=void 0==c?a+('<option value="'+c+'" selected="selected">'+g[c]+"</option>"):a+('<option value="'+c+'">'+g[c]+"</option>");a+="</select>";b("#location-state-div").html(a);
+e.data("oldval",e.val())}else if("AR"==this.value){document.getElementById("location-state-div").style.display="block";a='<span class="spantxt">State:</span><select class="inputtxt" name="location-state" id="location-state">';b("#location-state-div").html();b("#location-state").val();for(c in h)a=void 0==c?a+('<option value="'+c+'" selected="selected">'+h[c]+"</option>"):a+('<option value="'+c+'">'+h[c]+"</option>");a+="</select>";b("#location-state-div").html(a);e.data("oldval",e.val())}else if("JP"==
+this.value){document.getElementById("location-state-div").style.display="block";a='<span class="spantxt">State:</span><select class="inputtxt" name="location-state" id="location-state">';b("#location-state-div").html();b("#location-state").val();for(c in m)a=void 0==c?a+('<option value="'+c+'" selected="selected">'+m[c]+"</option>"):a+('<option value="'+c+'">'+m[c]+"</option>");a+="</select>";b("#location-state-div").html(a);e.data("oldval",e.val())}else if("ID"==this.value){document.getElementById("location-state-div").style.display=
+"block";a='<span class="spantxt">State:</span><select class="inputtxt" name="location-state" id="location-state">';b("#location-state-div").html();b("#location-state").val();for(c in l)a=void 0==c?a+('<option value="'+c+'" selected="selected">'+l[c]+"</option>"):a+('<option value="'+c+'">'+l[c]+"</option>");a+="</select>";b("#location-state-div").html(a);e.data("oldval",e.val())}else if("IT"==this.value){document.getElementById("location-state-div").style.display="block";a='<span class="spantxt">State:</span><select class="inputtxt" name="location-state" id="location-state">';
+b("#location-state-div").html();b("#location-state").val();for(c in k)a=void 0==c?a+('<option value="'+c+'" selected="selected">'+k[c]+"</option>"):a+('<option value="'+c+'">'+k[c]+"</option>");a+="</select>";b("#location-state-div").html(a);e.data("oldval",e.val())}else document.getElementById("location-state-div").style.display="none"})});
+function popupvalidation(){for(var b=document.getElementById("validfrm"),d=0;d<b.elements.length;d++){if("location-country"==b.elements[d].id&&0==b.elements[d].value||""==b.elements[d].value.trim())return document.getElementById("textmatter").style.color="#ff0000",b.elements[d].style.borderColor="#ff0000",b.elements[d].focus(),!1;document.getElementById("textmatter").style.color="#666666";b.elements[d].style.borderColor="#E5E5E5";if("SL_PHONE"==b.elements[d].id&&!0==isNaN(b.elements[d].value))return document.getElementById("textmatter").style.color=
+"#ff0000",b.elements[d].style.borderColor="#ff0000",b.elements[d].focus(),!1;if("SL_EMAIL"==b.elements[d].id){var f=b.elements[d].value,g=f.indexOf("@"),h=f.lastIndexOf(".");if(1>g||h<g+2||h+2>=f.length)return document.getElementById("textmatter").style.color="#ff0000",b.elements[d].style.borderStyle="solid",b.elements[d].style.borderColor="#ff0000",b.elements[d].focus(),!1;document.getElementById("textmatter").style.color="#666666";b.elements[d].style.borderColor="#E5E5E5"}}return!0};
 	</script>
 	<?php
 	global $cookie;
 	$cookie->SL_hidden=microtime();
 	?>
 	<div id="fade" class="LoginRadius_overlay">
-	<div id="popupouter" style="margin-top:-350px;">
+	<div id="popupouter" <?php echo $top_style;?>>
 	<div id="popupinner" <?php echo $style;?>>
 	<div id="textmatter"><strong>
 	<?php
 	if($msg==''){
-	//echo "Please fill the following details to complete the registration";
-	$show_msg=Configuration::get('POPUP_TITLE');
-	echo $msg= ( !empty($show_msg) ? $show_msg : $module->all_messages('Please fill the following details to complete the registration')) ;
+		//echo "Please fill the following details to complete the registration";
+		$show_msg=Configuration::get('POPUP_TITLE');
+		echo $msg= ( !empty($show_msg) ? $show_msg : $module->all_messages('Please fill the following details to complete the registration')) ;
 	}
-	else
-	{
-	echo $msg;
+	else {
+		echo $msg;
 	}
 	?>
 	</strong></div>
-	<form method="post" name="validfrm" id="validfrm" action="" onsubmit="return popupvalidation();">
+	<br/><form method="post" name="validfrm" id="validfrm" action="" onsubmit="return popupvalidation();">
 	<?php
 	$html="";
 	if(Configuration::get('user_require_field')=="1") {
@@ -718,29 +609,59 @@ function popUpWindow($msg='',$data=array()){
 			<span class="spantxt">'.$module->all_messages('Last Name').'</span><input type="text" name="SL_LNAME" id="SL_LNAME" placeholder="LastName" value= "'.(isset($_POST['SL_LNAME'])?htmlspecialchars($_POST['SL_LNAME']):'').'" class="inputtxt" />
 			</div>';
 		}
-		$html .= '<div id="location-state-div" style="display:none;">
-		<input id="location-state" type="text" name="location-state" value="empty" />
-		</div>';
 		$countries = Db::getInstance()->executeS('
 		SELECT *
 		FROM '._DB_PREFIX_.'country c WHERE c.active =1');
+		if(strpos($profilefield,'3') !== false) {
 		if (is_array($countries) AND !empty($countries)) {
 			$list = '';
-			if(strpos($profilefield,'3') !== false) {
-			$html .= '<div id="location-country-div">
-			<span class="spantxt">'.$module->all_messages('Country').'</span> <select id="location-country" name="location_country" class="inputtxt"><option value="0">None</option>';
-			foreach ($countries AS $country) {
-			$country_name = new Country($country['id_country']);
-			$html .= '<option value="'.($country['iso_code']).'"'.(isset($_POST['iso_code']) ? ' selected="selected"' : '').'>'.$country_name->name['1'].'</option>'."\n";
+				$html .= '<div id="location-country-div">
+				<span class="spantxt">'.$module->all_messages('Country').'</span> <select id="location-country" name="location_country" class="inputtxt"><option value="0">None</option>';
+				foreach ($countries AS $country) {
+					$country_name = new Country($country['id_country']);
+					$html .= '<option value="'.($country['iso_code']).'"'.(isset($_POST['location_country']) && ($_POST['location_country'] == $country['iso_code']) ? ' selected="selected"' : '').'>'.$country_name->name['1'].'</option>'."\n";
+				}
+				$html.='</select></div>';
 			}
-			$html.='</select></div>';
+		}
+		$value = true;
+			if(isset($_POST['location_country']) && strpos($profilefield,'3') !== false) {
+		      $country = new Country($_POST['location_country']);
+		      $value = $country->contains_states;
+		    }
+		    if($value) {
+		    $html .= '<div id="location-state-div" style="display:none;">
+		<input id="location-state" type="text" name="location-state" value="empty" />
+		</div>';
+		}
+		else {
+		 $country_id = Db::getInstance()->executeS('
+		SELECT *
+		FROM '._DB_PREFIX_.'country  c WHERE c.iso_code= "'.$_POST['location_country'].'"');
+		$states =  State::getStatesByIdCountry($country_id['0']['id_country']);
+		if (is_array($states)) {
+			$list = '';
+			$style="";
+			if(empty($states)) {
+			$style = 'style="display:none;"';
+			}
+				$html .= '<div id="location-state-div" '.$style.'>
+				<span class="spantxt">'.$module->all_messages('State').'</span> <select id="location-state" name="location-state" class="inputtxt">';
+				if(empty($states)) {
+					$html.='<option value="empty">None</option>';
+				}
+				foreach ($states as $state) {
+					$state_name = new State($state['id_state']);
+					$html .= '<option value="'.($state['iso_code']).'"'.(isset($_POST['location-state']) && ($_POST['location-state'] == $state['iso_code']) ? ' selected="selected"' : '').'>'.$state_name->name.'</option>'."\n";
+				}
+				$html.='</select></div>';
 			}
 		}
 	}
 	if(empty($data['email']) || $data['send_verification_email'] == 'yes'){
-		$html.='<div><span class="spantxt">'.$module->all_messages('Email').'</span>
-		<input type="text" name="SL_EMAIL" id="SL_EMAIL" placeholder="Email" value= "'.(isset($_POST['SL_EMAIL'])?htmlspecialchars($_POST['SL_EMAIL']):'').'" class="inputtxt" />
-		</div>';
+			$html.='<div><span class="spantxt">'.$module->all_messages('Email').'</span>
+			<input type="text" name="SL_EMAIL" id="SL_EMAIL" placeholder="Email" value= "'.(isset($_POST['SL_EMAIL'])?htmlspecialchars($_POST['SL_EMAIL']):'').'" class="inputtxt" />
+			</div>';
 	}
 	if(Configuration::get('user_require_field')=="1") {
 		if(strpos($profilefield,'4') !== false) {
@@ -763,6 +684,7 @@ function popUpWindow($msg='',$data=array()){
 			<input type="text" name="SL_ZIP_CODE" id="SL_ZIP_CODE" placeholder="Zip Code" value= "'.(isset($_POST['SL_ZIP_CODE'])?htmlspecialchars($_POST['SL_ZIP_CODE']):'').'" class="inputtxt" />
 			</div>';
 		}
+		
 		if(strpos($profilefield,'7') !== false) {
 			$html.='<div><span class="spantxt">'.$module->all_messages('Address Title').'</span><input type="text" name="SL_ADDRESS_ALIAS" id="SL_ADDRESS_ALIAS" placeholder="Please assign an address title for future reference" value= "'.(isset($_POST['SL_ADDRESS_ALIAS'])?htmlspecialchars($_POST['SL_ADDRESS_ALIAS']):'').'" class="inputtxt" />
 			</div>';
@@ -795,7 +717,6 @@ function verifyEmail(){
 	$msg= $module->all_messages('Email is verified. Now you can login using Social Login.');
 	popup_verify($msg);
 }
-
 // send credenntials to customer.
 function user_notification_email($email,$user) {
 	$module= new sociallogin();
@@ -839,7 +760,7 @@ function SL_email($to,$sub,$msg,$firstname,$lastname,$social_id){
 	if($_SERVER['HTTP_HOST']=="localhost"){
 		echo $module->all_messages('Email will work at online only.');
 	}else{
-		$msgg=$module->all_messages('Your Confirmation link Has Been Sent To Your Email Address. Please verify your email by clicking on confirmation link.');
+		$msgg=$module->all_messages('Your confirmation link has been sent to your email address. Please verify your email by clicking on confirmation link.');
 		popup_verify($msgg, $social_id);
 		$id_lang = (int)Configuration::get('PS_LANG_DEFAULT');
 		$protocol_content = (Configuration::get('PS_SSL_ENABLED')) ? 'https://' : 'http://';
@@ -857,7 +778,7 @@ function SL_email($to,$sub,$msg,$firstname,$lastname,$social_id){
 function SL_randomchar(){
 	$char="";
 	for($i=0;$i<20;$i++){
-		$char.=rand(0,9);
+	$char.=rand(0,9);
 	}
 	return($char);
 }
@@ -868,18 +789,19 @@ function SL_data_save($lrdata=array()){
 	$provider_id=$lrdata['id'];
 	$provider_name=$lrdata['provider'];
 	if(!$cookie->isLogged()) {
-		 $email= $lrdata['email'];
-		 $query="SELECT c.id_customer from "._DB_PREFIX_."customer AS c INNER JOIN "._DB_PREFIX_."sociallogin AS sl ON sl.id_customer=c.id_customer  WHERE c.email='$email'";
+		$email= $lrdata['email'];
+		$query="SELECT c.id_customer from "._DB_PREFIX_."customer AS c INNER JOIN "._DB_PREFIX_."sociallogin AS sl ON sl.id_customer=c.id_customer  WHERE c.email='$email'";
 		$query = Db::getInstance()->ExecuteS($query);
 		if(!empty($query['0']['id_customer'])){
-			$error_msg="<p style ='color:red;'>".$module->all_messages('This email id already exist')."</p>";
+			$ERROR_MESSAGE=Configuration::get('ERROR_MESSAGE');
+			$error_msg="<p style ='color:red;'>".$ERROR_MESSAGE."</p>";
 			$lrdata['email']='';
 			popUpWindow($error_msg,$lrdata);
 			return;
 		}
 		else{
-		    $cookie->login_radius_data='';
-		    $cookie->SL_hidden='';
+			$cookie->login_radius_data='';
+			$cookie->SL_hidden='';
 			$query1="SELECT * FROM "._DB_PREFIX_."customer  WHERE email='$email'";
 			$query1 = Db::getInstance()->ExecuteS($query1);
 			$num=(!empty($query1['0']['id_customer'])?$query1['0']['id_customer']:"");
@@ -906,7 +828,6 @@ function SL_data_save($lrdata=array()){
 		}
 	}
 }
-
 //Show Error Message.
 function popup_verify($msg, $social_id='') {
 	$module= new sociallogin();
@@ -919,26 +840,26 @@ function popup_verify($msg, $social_id='') {
 	$html.='
 	<input type="button" value="'.$module->all_messages('Ok').'" onclick="window.location.href=window.location.href;" class="inputbutton" />';
 	if(!empty($social_id)) {
-		$html.='
-		<input type="hidden" value="'.$social_id.'" name="social_id_value" class="inputbutton" />
-		<input type="submit" value="'.$module->all_messages('Resend Email Verification').'" name="resend_email_verification" class="inputbutton" />';
+	$html.='
+	<input type="hidden" value="'.$social_id.'" name="social_id_value" class="inputbutton" />
+	<input type="submit" value="'.$module->all_messages('Resend Email Verification').'" name="resend_email_verification" class="inputbutton" />';
 	}
 	$html.='</form></div></div></div></div>';
 	echo $html;
 }
 
-//Insert popup optionla fields.
-function extraFields($data,$insert_id,$fname,$lname, $update=''){
+//Insert popup optional fields.
+	function extraFields($data,$insert_id,$fname,$lname, $update=''){
 	$str="";
 	if(!empty($data['country'])){
 		$country=$data['country'];
 		$id=pSQL(getIdByCountryISO($country));
-		 $str.="id_country='$id',";
+		$str.="id_country='$id',";
 	}
 	if(!empty($data['country']) && empty($id)) {
-	 $country=$data['country'];
-	 $id=pSQL(getIdByCountryName($country));
-	 $str="id_country='$id',";
+		$country=$data['country'];
+		$id=pSQL(getIdByCountryName($country));
+		$str="id_country='$id',";
 	}
 	elseif(empty($id)){
 		$id = (int)(Configuration::get('PS_COUNTRY_DEFAULT'));
@@ -972,57 +893,73 @@ function extraFields($data,$insert_id,$fname,$lname, $update=''){
 	$tbl=_DB_PREFIX_."address";
 	$date=date("y-m-d h:i:s");
 	if($update =='yes') {
-	if(!empty($fname)){
-		 $str.="firstname='$fname',";
+		if(!empty($fname)){
+			$str.="firstname='$fname',";
+		}
+		if(!empty($lname)){
+			$str.="lastname='$lname',";
+		}
+		$q= "UPDATE $tbl SET ".$str." date_upd='$date' WHERE id_customer='$insert_id'";
+		$q = Db::getInstance()->Execute($q);
 	}
-	if(!empty($lname)){
-		 $str.="lastname='$lname',";
-	}
-	$q= "UPDATE $tbl SET ".$str." date_upd='$date' WHERE id_customer='$insert_id'";
-	$q = Db::getInstance()->Execute($q);
-	}
-		else {
-	$str.="date_add='$date',date_upd='$date',";
-	$fname=pSQL($fname);
-	$lname=pSQL($lname);
-	 $q= "INSERT into $tbl SET ".$str." id_customer='$insert_id', lastname='$lname',firstname='$fname' ";
-	$q = Db::getInstance()->Execute($q);
+	else {
+		$str.="date_add='$date',date_upd='$date',";
+		$fname=pSQL($fname);
+		$lname=pSQL($lname);
+		$q= "INSERT into $tbl SET ".$str." id_customer='$insert_id', lastname='$lname',firstname='$fname' ";
+		$q = Db::getInstance()->Execute($q);
 	}
 }
 
 //Get country name by Counter ISo=code.
 function getIdByCountryISO($ISO){
-	$tbl=_DB_PREFIX_."country";
-	$field="iso_code";
-	$ISO=pSQL(trim($ISO));
-	$q="SELECT * from $tbl WHERE $field='$ISO'";
-	$q = Db::getInstance()->ExecuteS($q);
-	$iso="";
-	$iso=(isset($q[0]['id_country']) ? $q[0]['id_country']: '');
-	return($iso);
-}
-
-// Get Counter name by ID.
-function getIdByCountryName($country){
-	$tbl=_DB_PREFIX_."country_lang";
-	$country=pSQL(trim($country));
-	$q="SELECT * from $tbl WHERE name='$country'";
-	$q = Db::getInstance()->ExecuteS($q);
-	$iso=$q[0]['id_country'];
-	return($iso);
-}
-
-// Get State. from ISO-code.
-function getIsoByState($state){
-	$tbl=_DB_PREFIX_."state";
-	$q="SELECT * from $tbl WHERE  iso_code ='$state'";
-	$q = Db::getInstance()->ExecuteS($q);
-	if(!empty($q)) {
-		$id=$q[0]['id_state'];
-		return($id);
+	if(!empty($ISO)) {
+		$tbl=_DB_PREFIX_."country";
+		$field="iso_code";
+		if(isset($ISO->Code)) {
+			$ISO = $ISO->Code;
+		}
+		if(is_string($ISO)) {
+			$ISO=pSQL(trim($ISO));
+			$q="SELECT * from $tbl WHERE $field='$ISO'";
+			$q = Db::getInstance()->ExecuteS($q);
+			$iso="";
+			$iso=(isset($q[0]['id_country']) ? $q[0]['id_country']: '');
+			return($iso);
+		}
+		return '';
 	}
 }
-
+// Get Counter name by ID.
+function getIdByCountryName($country){
+	if(!empty($country)) {
+		if(isset($country->Name)) {
+			$country = $country->Name;
+		}
+		if(is_string($country)) {
+			$tbl=_DB_PREFIX_."country_lang";
+			$country=pSQL(trim($country));
+			$q="SELECT * from $tbl WHERE name='$country'";
+			$q = Db::getInstance()->ExecuteS($q);
+			$iso=$q[0]['id_country'];
+			return($iso);
+		}
+	}
+	return '';
+}
+// Get State. from ISO-code.
+function getIsoByState($state){
+	if(!empty($state) && is_string($state)) {
+		$tbl=_DB_PREFIX_."state";
+		$q="SELECT * from $tbl WHERE  iso_code ='$state'";
+		$q = Db::getInstance()->ExecuteS($q);
+		if(!empty($q)) {
+			$id=$q[0]['id_state'];
+			return($id);
+		}
+	}
+	return '';
+}
 // remove special character from name.
 function remove_special($field){
 	$in_str = str_replace(array('<', '>', '&', '{', '}', '*', '/', '(', '[', ']' , '@', '!', ')', '&', '*', '#', '$', '%', '^', '|','?', '+', '=','"',','), array(''), $field);
@@ -1054,17 +991,20 @@ function remove_special($field){
 */	
 function email_rand($lrdata){
 	switch ($lrdata['provider']) {
-	case 'twitter':
-	$email= $lrdata['id'].'@'.$lrdata['provider'].'.com';
-	break;
-	default:
-	$email_id = drupal_substr($lrdata['id'], 7);
-	$email_id2 = str_replace("/", "_", $email_id);
-	$email = str_replace(".", "_", $email_id2) . '@' . $lrdata['provider'] . '.com';
-	break;
+		case 'twitter':
+			$email= $lrdata['id'].'@'.$lrdata['provider'].'.com';
+		break;
+		default:
+			$email_id = substr($lrdata['id'], 7);
+			$email_id2 = str_replace("/", "_", $email_id);
+			$email = str_replace(".", "_", $email_id2) . '@' . $lrdata['provider'] . '.com';
+		break;
 	}
 	return $email;
 }
+/*
+* Map user profule data from LoginRadius profile data according to Prestashop.
+*/
 function loginradius_mapping_profile_data($userprofile) {
 	$lrdata['fullname'] = (!empty($userprofile->FullName) ? $userprofile->FullName : '');
 	$lrdata['profilename'] = (!empty($userprofile->ProfileName) ? $userprofile->ProfileName : '');
@@ -1091,11 +1031,11 @@ function loginradius_mapping_profile_data($userprofile) {
 	$lrdata['state'] = (!empty($userprofile->State) ? $userprofile->State : '');
 	$lrdata['city'] = (!empty($userprofile->City) ? $userprofile->City : '');
 	if (empty($lrdata['city']) || $lrdata['city'] == 'unknown') {
-		$lrdata['city'] = (!empty($userprofile->LocalCity) &&  $userprofile->LocalCity != 'unknown' ? $userprofile->LocalCity : '');
+	$lrdata['city'] = (!empty($userprofile->LocalCity) &&  $userprofile->LocalCity != 'unknown' ? $userprofile->LocalCity : '');
 	}
 	$lrdata['country'] = (!empty($userprofile->Country) ? $userprofile->Country : '');
 	if (empty($lrdata['country'])) {
-		$lrdata['country'] = (!empty($userprofile->LocalCountry) ? $userprofile->LocalCountry : '');
+	$lrdata['country'] = (!empty($userprofile->LocalCountry) ? $userprofile->LocalCountry : '');
 	}
 	$lrdata['phonenumber'] = (!empty($userprofile->PhoneNumbers['0']->PhoneNumber) ? $userprofile->PhoneNumbers['0']->PhoneNumber : '' );
 	$lrdata['address']=(!empty($userprofile->Addresses['0']->Address1)? $userprofile->Addresses['0']->Address1 : '');

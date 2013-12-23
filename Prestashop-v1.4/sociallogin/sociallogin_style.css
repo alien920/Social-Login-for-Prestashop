@@ -157,13 +157,6 @@ color: #0D5995;
 .LoginRadius_table .row_white {
  background-color: #fff;
 }
-<!--[if IE]>
-.LoginRadius_content_IE
-{
-background:black;
--ms-filter:"progid:DXImageTransform.Microsoft.Alpha(Opacity=90)";
-filter: alpha(opacity=90);
-}
 .LoginRadius_overlay{
 	background: none no-repeat scroll 0 0 rgba(127, 127, 127, 0.6);
 	height: 100%;
@@ -179,5 +172,13 @@ filter: alpha(opacity=90);
 #sortable li{
   float:left !important;
  }
+<!--[if IE]>
+.LoginRadius_content_IE
+{
+background:black;
+-ms-filter:"progid:DXImageTransform.Microsoft.Alpha(Opacity=90)";
+filter: alpha(opacity=90);
+}
+
  
 <!--[endif]-->

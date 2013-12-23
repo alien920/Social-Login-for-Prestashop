@@ -5,7 +5,7 @@ class LoginRadius {
     $IsAuthenticated = false;
     if (isset($_REQUEST['token'])) {
       $ValidateUrl ="https://hub.loginradius.com/UserProfile/" . $ApiSecrete . "/" . $_REQUEST['token'];
-	  $JsonResponse = $this->loginradius_call_api($ValidateUrl);
+	  $JsonResponse = $this->loginradius_call_api($ValidateUrl);;
       $UserProfile = json_decode($JsonResponse);
       if (isset($UserProfile->ID) && $UserProfile->ID != ''){ 
         $this->IsAuthenticated = true;
@@ -39,7 +39,7 @@ class LoginRadius {
 	    $curl_handle = curl_init();
         curl_setopt($curl_handle, CURLOPT_URL, $ValidateUrl);
           curl_setopt($curl_handle, CURLOPT_CONNECTTIMEOUT, 5);
-		  curl_setopt($curl_handle, CURLOPT_TIMEOUT, 5);
+		  curl_setopt($curl_handle, CURLOPT_TIMEOUT, 15);
           curl_setopt($curl_handle, CURLOPT_SSL_VERIFYPEER, false);
         if (ini_get('open_basedir') == '' && (ini_get('safe_mode') == 'Off' or !ini_get('safe_mode'))) 
 		  {
@@ -57,8 +57,8 @@ class LoginRadius {
             curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($curl_handle, CURLOPT_SSL_VERIFYPEER, false);
          }
-		 $JsonResponse = curl_exec($curl_handle);
-		 $httpCode = curl_getinfo($curl_handle, CURLINFO_HTTP_CODE);
+		    $JsonResponse = curl_exec($curl_handle);
+		    $httpCode = curl_getinfo($curl_handle, CURLINFO_HTTP_CODE);
 			 if(in_array($httpCode, array(400, 401, 403, 404, 500, 503)) && $httpCode != 200)
 			 {
 				return '<div id="Error">Uh oh, looks like something went wrong. Try again in a sec!</div>';

@@ -39,7 +39,7 @@ class LoginRadius {
 	    $curl_handle = curl_init();
         curl_setopt($curl_handle, CURLOPT_URL, $ValidateUrl);
           curl_setopt($curl_handle, CURLOPT_CONNECTTIMEOUT, 5);
-		  curl_setopt($curl_handle, CURLOPT_TIMEOUT, 5);
+		  curl_setopt($curl_handle, CURLOPT_TIMEOUT, 15);
           curl_setopt($curl_handle, CURLOPT_SSL_VERIFYPEER, false);
         if (ini_get('open_basedir') == '' && (ini_get('safe_mode') == 'Off' or !ini_get('safe_mode'))) 
 		  {

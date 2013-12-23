@@ -2,7 +2,7 @@
         <module>
             <name>sociallogin</name>
             <displayName><![CDATA[Social Login]]></displayName>
-            <version><![CDATA[2.5]]></version>
+            <version><![CDATA[2.6]]></version>
             <description><![CDATA[Let your users log in and comment via their accounts with popular ID providers such as Facebook, Google, Twitter, Yahoo, Vkontakte and over 25 more!.]]></description>
             <author><![CDATA[LoginRadius]]></author>
             <tab><![CDATA[]]></tab>

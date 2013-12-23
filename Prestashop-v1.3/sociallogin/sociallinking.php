@@ -12,8 +12,9 @@ global $smarty;
 //$socialloginlrmessage = '';
 if ($cookie->isLogged())
 {
+    $sociallogin = new sociallogin();
 	$smarty->assign(array(
-	'lr_check' =>  sociallogin::jsinterface()
+	'lr_check' =>  $sociallogin->jsinterface()
 ));	
 	//if(isset($cookie->lrmessage) && $cookie->lrmessage != ''){
 		$smarty->assign('socialloginlrmessage', $cookie->lrmessage);
