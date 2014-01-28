@@ -62,3 +62,7 @@ c.Click "Save and Get Code" to generate API Key & Secret.
 = 2.7 =
 * Fixed issue of Customer Group.
 * Popup post value shown in popup textbox.
+
+== Changelog ==
+= 2.8 ==
+* Fixed all PS validation issue

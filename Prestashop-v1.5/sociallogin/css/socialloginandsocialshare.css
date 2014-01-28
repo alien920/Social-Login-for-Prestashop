@@ -1,32 +1,32 @@
- #sharehorizontal label{
-clear: both;
-width: auto !important;
+#sharehorizontal label{
+	clear: both;
+	width: auto !important;
 }
 #sharevertical label{
-width: auto !important;
+	width: auto !important;
 }
 .row_white.shareprovider > td {
-float: left;
-width: 154px;
-margin-bottom: 0px !important;
-padding: 4px 17px 2px 4px !important;
+	float: left;
+	width: 154px;
+	margin-bottom: 0px !important;
+	padding: 4px 17px 2px 4px !important;
 }
 .row_white.verticalshareprovider > td {
-float: left;
-width: 154px;
-margin-bottom: 0px !important;
-padding: 4px 17px 2px 4px !important;
+	float: left;
+	width: 154px;
+	margin-bottom: 0px !important;
+	padding: 4px 17px 2px 4px !important;
 }
 
-.row_white.counterprovider > td , .row_white.verticalcounterprovider > td{
-float: left;
-width: 154px;
-margin-bottom: 0px !important;
-padding: 4px 17px 2px 4px !important;
+.row_white.counterprovider > td , .row_white.verticalcounterprovider > td {
+	float: left;
+	width: 154px;
+	margin-bottom: 0px !important;
+	padding: 4px 17px 2px 4px !important;
 }
-#sortable li, #verticalsortable li{
-  float:left !important;
- }
+#sortable li, #verticalsortable li {
+	float:left !important;
+}
 
 div.current input, div.current textarea, div.current select {
   float: none !important;
@@ -43,14 +43,14 @@ div.current input, div.current textarea, div.current select {
   color:#0088CC;;
   line-height:160%;
 }
-.help_ul li a:hover{
-text-decoration: underline;
+.help_ul li a:hover {
+	text-decoration: underline;
 }
 .stay_ul {
-  margin:0 0 15px 10px;
-  padding:0px;
-  float:left;
-  list-style:none;
+	margin:0 0 15px 10px;
+	padding:0px;
+	float:left;
+	list-style:none;
 }
 .stay_ul li {
   line-height:160%;
@@ -59,7 +59,7 @@ text-decoration: underline;
 }
 
 #Error {
-  background-image: url("img/error.png");
+  background-image: url("../img/error.png");
   background-repeat:no-repeat;
   background-position:left; 
   color:#FF0000; 
@@ -69,13 +69,13 @@ text-decoration: underline;
   border: 1px solid #ED541D;
 }
 #wait {
-  background-image: url("img/loading.gif");
+  background-image: url("../img/loading.gif");
   background-repeat:no-repeat;
   padding: 0px 2px 2px 30px;
   color:#000;	
 }
 #Success {
-  background-image: url("img/ok.png");
+  background-image: url("../img/ok.png");
   background-repeat:no-repeat;
   background-position:left; 
   color:#669933; 
@@ -85,87 +85,87 @@ text-decoration: underline;
   border: 1px solid #60CF4E;
 }
 .sociallogin_form {
- padding: 0;
- background-color: #fff;
+	 padding: 0;
+	 background-color: #fff;
 }
 .sociallogin_form a {
- text-decoration: none !important;
- color: #0088CC;;
+	 text-decoration: none !important;
+	 color: #0088CC;;
 }
 .sociallogin_form .blank a {
- text-decoration: none !important;
- padding: 0 15px !important;
- font-weight: bold;
+	 text-decoration: none !important;
+	 padding: 0 15px !important;
+	 font-weight: bold;
 }
 .sociallogin_form a:hover {
- text-decoration: none !important;;
+ 	text-decoration: none !important;;
 }
 .sociallogin_form legend {
- margin-left: 10px;
- line-height: 30px;
+	 margin-left: 10px;
+	 line-height: 30px;
 }
 .sociallogin_form .row {
- padding: 5px 10px;
- font-size: 12px;
- clear: both;
- overflow: hidden;
+	 padding: 5px 10px;
+	 font-size: 12px;
+	 clear: both;
+	 overflow: hidden;
 }
 .sociallogin_form .row_title {
- font-size: 14px;
- font-weight: bold;
- margin-top: 15px;
- color:#00ccff;
+	 font-size: 14px;
+	 font-weight: bold;
+	 margin-top: 15px;
+	 color:#00ccff;
 }
 .sociallogin_form .row_button {
- background-color: #F6F6F6;
- border-top: 1px dotted #ddd;
- margin-top: 14px;
- padding: 5px 10px;
+	 background-color: #F6F6F6;
+	 border-top: 1px dotted #ddd;
+	 margin-top: 14px;
+	 padding: 5px 10px;
 }
 .sociallogin_form .row_description {
- padding: 5px 0 10px 10px;
- font-weight: bold;
- color:#00ccff;
+	 padding: 5px 0 10px 10px;
+	 font-weight: bold;
+	 color:#00ccff;
 }
 .sociallogin_form_main {
- background-color: #EAF7FF;
+	 background-color: #EAF7FF;
 }
 .sociallogin_form_main .row {
- margin-bottom: 7px;
+ 	margin-bottom: 7px;
 }
 .sociallogin_form_main .row_button {
- padding-bottom: 0 !important;
- background-color: #EAF7FF;
+	 padding-bottom: 0 !important;
+	 background-color: #EAF7FF;
 }
 .icon-48-configuration {
     background-image: url("../img/configuration.gif");
 }
 .sociallogin_table {
-border: 1px solid #ccc ;
+	border: 1px solid #ccc ;
 }
 .sociallogin_table , .sociallogin_table1 {
- background-color: #efefef ;
- margin-bottom: 10px ;
- border-collapse: collapse;
- font-family: sans-serif;
- font-size: 12px;
- line-height: 1.4em;
- margin-left: 2px;
- width: 100%;
+	 background-color: #efefef ;
+	 margin-bottom: 10px ;
+	 border-collapse: collapse;
+	 font-family: sans-serif;
+	 font-size: 12px;
+	 line-height: 1.4em;
+	 margin-left: 2px;
+	 width: 100%;
 }
 .sociallogin_table input {
- border-color: #aaa ;
+ 	border-color: #aaa ;
 }
 .sociallogin_table .head {
- font-weight: bold ;
- font-size: 13px ;
- font-weight: bold ;
- background-color: #ddd ;
+	 font-weight: bold ;
+	 font-size: 13px ;
+	 font-weight: bold ;
+	 background-color: #ddd ;
 }
 .sociallogin_table .subhead {
- font-weight: bold ;
- font-size: 13px ;
- font-weight: bold ;
+	 font-weight: bold ;
+	 font-size: 13px ;
+	 font-weight: bold ;
 }
 .sociallogin_table th, .sociallogin_table label {
     color: #222222;
@@ -196,13 +196,13 @@ border: 1px solid #ccc ;
     font-weight: inherit;
 }
 .sociallogin_table tr td.row {
- line-height: 36px ;
+ 	line-height: 36px ;
 }
 .sociallogin_table tr.description td {
- color: #0D5995 ;
+ 	color: #0D5995 ;
 }
 .sociallogin_table .row_white {
- background-color: #fff ;
+	 background-color: #fff ;
 }
 .sociallogin_table th, .sociallogin_table label {
     color: #222222;
@@ -219,46 +219,58 @@ border: 1px solid #ccc ;
     text-shadow: 0 1px 0 #FFFFFF;
 }
 .sociallogin_helpbox ul {
- list-style-type: none;
- padding-left: 20px;
- font-size:12px !important;
- color:#000000 !important;
+	 list-style-type: none;
+	 padding-left: 20px;
+	 font-size:12px !important;
+	 color:#000000 !important;
  }
 .sociallogin_helpbox {
-border-color: #CCCCCC;
+	border-color: #CCCCCC;
 }
 .sociallogin_helpbox a {
- color:#000000 !important;
- text-decoration:none;
+	color:#000000 !important;
+	text-decoration:none;
 }
 .sociallogin_helpbox a:hover {
- color: #00ccff !important;
+ 	color: #00ccff !important;
 }
-
-
 .pane-sliders .title {
 	margin: 0;
 	padding: 2px;
 	color: #666;
 	cursor: pointer;
 }
+.pane-sliders .panel   { 
+	border: 1px solid #ccc; margin-bottom: 3px;
+}
+.pane-sliders .panel h3 { 
+	background: #f6f6f6; color: #666;
+}
+.pane-sliders .content { 
+	background: #f6f6f6; 
+}
+.pane-sliders .adminlist { 
+	border: 0 none;
+ }
+.pane-sliders .adminlist td  
+{ 
+	border: 0 none; 
+}
 
-.pane-sliders .panel   { border: 1px solid #ccc; margin-bottom: 3px;}
+.jpane-toggler  span     
+{ 
+	background: transparent url(../images/j_arrow.png) 5px 50% no-repeat; padding-left: 20px;
+}
+.jpane-toggler-down span 
+{ 
+	background: transparent url(../images/j_arrow_down.png) 5px 50% no-repeat; padding-left: 20px;
+}
 
-.pane-sliders .panel h3 { background: #f6f6f6; color: #666}
-
-.pane-sliders .content { background: #f6f6f6; }
-
-.pane-sliders .adminlist     { border: 0 none; }
-.pane-sliders .adminlist td  { border: 0 none; }
-
-.jpane-toggler  span     { background: transparent url(../images/j_arrow.png) 5px 50% no-repeat; padding-left: 20px;}
-.jpane-toggler-down span { background: transparent url(../images/j_arrow_down.png) 5px 50% no-repeat; padding-left: 20px;}
-
-.jpane-toggler-down {  border-bottom: 1px solid #ccc; }
-
+.jpane-toggler-down 
+{  
+	border-bottom: 1px solid #ccc; 
+}
 /* tabs */
-
 dl.tabs {
 	float: left;
 	margin: 10px 0 -1px 0;
@@ -275,20 +287,17 @@ dl.tabs dt {
 	background: #f0f0f0;
 	color: #666;
 }
-
 dl.tabs dt.open {
 	background: #F9F9F9;
 	border-bottom: 1px solid #F9F9F9;
 	z-index: 100;
 	color: #000;
 }
-
 div.current {
 	clear: both;
 	border: 1px solid #ccc;
 	padding: 10px 10px;
 }
-
 div.current dd {
 	padding: 0;
 	margin: 0;

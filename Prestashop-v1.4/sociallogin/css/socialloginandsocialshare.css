@@ -59,7 +59,7 @@ text-decoration: underline;
 }
 
 #Error {
-  background-image: url("img/error.png");
+  background-image: url("../img/error.png");
   background-repeat:no-repeat;
   background-position:left; 
   color:#FF0000; 
@@ -69,13 +69,13 @@ text-decoration: underline;
   border: 1px solid #ED541D;
 }
 #wait {
-  background-image: url("img/loading.gif");
+  background-image: url("../img/loading.gif");
   background-repeat:no-repeat;
   padding: 0px 2px 2px 30px;
   color:#000;	
 }
 #Success {
-  background-image: url("img/ok.png");
+  background-image: url("../img/ok.png");
   background-repeat:no-repeat;
   background-position:left; 
   color:#669933; 
